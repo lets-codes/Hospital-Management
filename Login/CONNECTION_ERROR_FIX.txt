@@ -1,0 +1,109 @@
+🔧 HOW TO FIX "Connection error on localhost:5000" 
+================================================================
+
+QUICK FIX (3 Steps):
+================================================================
+
+STEP 1: START MYSQL AS ADMINISTRATOR
+─────────────────────────────────────
+1. Right-click "Command Prompt" or "PowerShell" 
+2. Select "Run as administrator"
+3. Enter this command:
+   net start MySQL80
+
+   (If that doesn't work, try: net start MySQL57 or net start MySQL)
+
+   You should see: "The MySQL80 service has been started successfully."
+
+
+STEP 2: DATABASE IS NOW READY
+─────────────────────────────
+The database "deepanshu" with tables will be created automatically when:
+- You run the server for the first time
+- You make your first request
+
+
+STEP 3: START THE FLASK SERVER
+──────────────────────────────
+1. Open PowerShell or Command Prompt (normal, not admin)
+2. Navigate to your Hospital Management folder:
+   cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\Hospital Management\Login"
+
+3. Run the server:
+   python server_patient_doctor.py
+
+4. You should see:
+   Running on http://localhost:5000
+   WARNING: This is a development server. Use a production server in production.
+
+5. Open your browser and go to:
+   http://localhost:5000
+
+
+WHAT WAS FIXED:
+================================================================
+❌ OLD CONFIG: password: 'root'
+✓  NEW CONFIG: password: '' (empty - no password)
+
+MySQL on your system has NO password for root user.
+The server file has been updated to use the correct credentials.
+
+
+IF IT STILL DOESN'T WORK:
+================================================================
+
+1. MySQL Service Status:
+   - Open "Services" (search in Start menu)
+   - Find "MySQL80" or "MySQL"
+   - Right-click → "Start"
+
+2. MySQL Not Starting?
+   - Check MySQL error logs: C:\ProgramData\MySQL\MySQL Server 8.0\Data
+   - Look for .err files
+   
+3. Port Already in Use?
+   - Port 5000 already taken
+   - Stop other applications using it
+   - Or edit server file to use different port
+
+4. Connection Timeout?
+   - Verify MySQL is fully started (wait 10 seconds after starting)
+   - Then run the server
+
+
+VERIFY EVERYTHING IS WORKING:
+================================================================
+
+Run this Python script to test:
+─────────────────────────────
+import mysql.connector
+
+try:
+    conn = mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password=''
+    )
+    print("✓ MySQL Connection: SUCCESS")
+    conn.close()
+except Exception as e:
+    print(f"✗ MySQL Connection: FAILED - {e}")
+
+
+DEFAULT LOGIN CREDENTIALS (After Setup):
+================================================================
+Format: http://localhost:5000
+
+You can create accounts through the signup page.
+
+
+STILL HAVING ISSUES?
+================================================================
+Run the diagnostic tool:
+   python FIX_CONNECTION_ERROR.py
+
+This will check:
+- MySQL service status
+- Database credentials
+- Table creation
+- Port availability

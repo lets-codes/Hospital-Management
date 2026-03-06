@@ -1,0 +1,165 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                   LOGIN SYSTEM - PYTHON SETUP (No Node.js)                  ║
+║                                                                              ║
+║              Node.js installation failed? Use Python instead!                ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+QUICK START - 4 SIMPLE STEPS
+==================================
+
+STEP 1: INSTALL PYTHON
+======================
+1. Go to: https://www.python.org/downloads/
+2. Download Python 3.11 or later
+3. Run the installer
+4. ⭐ IMPORTANT: Check the box "Add Python to PATH"
+5. Click "Install Now"
+6. Restart your computer
+
+Verify:
+- Open Command Prompt
+- Type: python --version
+- You should see version number (not error)
+
+
+STEP 2: INSTALL PYTHON PACKAGES
+================================
+1. Open Command Prompt
+2. Copy this command:
+
+cd /d "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"
+
+3. Press Enter
+4. Copy this command:
+
+pip install flask flask-cors mysql-connector-python bcrypt
+
+5. Press Enter
+6. Wait for "Successfully installed..." message
+
+
+STEP 3: CREATE MYSQL DATABASE
+==============================
+1. Open MySQL Command Line or MySQL Workbench
+2. Copy and paste ALL of this:
+
+------ COPY FROM HERE ------
+CREATE DATABASE IF NOT EXISTS deepanshu;
+USE deepanshu;
+
+CREATE TABLE IF NOT EXISTS login (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+);
+------ COPY TO HERE ------
+
+3. Press Enter
+4. You should see "Query OK"
+
+
+STEP 4: START THE SERVER
+========================
+1. Open Command Prompt
+2. Go to Login folder:
+
+cd /d "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"
+
+3. Start server:
+
+python server_python.py
+
+4. You should see:
+   - Connecting to MySQL
+   - "✓ Connected to MySQL Database 'deepanshu'"
+   - "Server running on: http://localhost:5000"
+
+LEAVE THIS WINDOW OPEN!
+
+
+STEP 5: TEST THE SYSTEM
+=======================
+1. Open web browser
+2. Go to: http://localhost:5000/signup.html
+3. Fill in:
+   - Full Name: Test User
+   - Email: test@example.com
+   - Password: test123456
+4. Click "Sign Up"
+5. Should see: "User registered successfully. Please login."
+6. Click "Sign in" link
+7. Go to: http://localhost:5000/login.html
+8. Enter:
+   - Email: test@example.com
+   - Password: test123456
+9. You should see your profile page!
+
+✅ SUCCESS! Your login system is working!
+
+
+URLS TO USE:
+============
+Sign Up:  http://localhost:5000/signup.html
+Login:    http://localhost:5000/login.html
+Home:     http://localhost:5000/home.html
+
+
+TROUBLESHOOTING:
+================
+
+Problem: "python is not recognized"
+Solution: Reinstall Python and CHECK "Add Python to PATH"
+
+Problem: "pip install failed"
+Solution: 
+- Close Command Prompt
+- Open new Command Prompt
+- Try pip install again
+
+Problem: "MySQL connection error"
+Solution:
+- Make sure MySQL server is running
+- Make sure 'deepanshu' database exists
+- Check database.sql commands were run
+
+Problem: "Cannot GET /signup.html"
+Solution:
+- Make sure server_python.py is running
+- Check you're using port 5000: http://localhost:5000
+- NOT port 3000
+
+Problem: "Registration failed after signup"
+Solution:
+- Check server output for error messages
+- Make sure MySQL database and table exist
+- Try a different email address
+
+
+FILES IN THIS FOLDER:
+====================
+✓ server_python.py      - Python server (replaces Node.js server.js)
+✓ login.html            - Login page (updated for port 5000)
+✓ signup.html           - Sign up page (updated for port 5000)
+✓ home.html             - Home/profile page (updated for port 5000)
+✓ database.sql          - Database schema
+✓ SETUP_PYTHON.bat      - Automated setup script
+✓ FIX_REGISTRATION_FAIL.txt - More troubleshooting
+
+
+NEXT TIME YOU WANT TO USE THE SYSTEM:
+=====================================
+1. Open Command Prompt
+2. Type:
+   cd /d "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"
+3. Type:
+   python server_python.py
+4. Open browser to: http://localhost:5000/signup.html
+
+
+That's it! Your login system is ready! 🚀

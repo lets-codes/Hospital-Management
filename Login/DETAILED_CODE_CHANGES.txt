@@ -1,0 +1,132 @@
+# Code Changes Made - Detailed Log
+
+## File 1: pharmacist_portal.html
+
+### Change 1: Fixed displayMedicines() Function Declaration
+**Location**: Line ~612
+**Issue**: Function was missing its declaration, causing medicines to not display after adding
+
+**Before**:
+```javascript
+            }).join('');
+        }
+
+            const container = document.getElementById('medicinesContainer');
+```
+
+**After**:
+```javascript
+            }).join('');
+        }
+
+        function displayMedicines(medicines) {
+            const container = document.getElementById('medicinesContainer');
+```
+
+**Impact**: Medicine list now displays correctly after adding new medicines
+
+---
+
+### Change 2: Enhanced Form Validation in addMedicine()
+**Location**: Line ~697-699
+**Issue**: Weak validation allowed invalid form submission
+
+**Before**:
+```javascript
+            if (!name || quantity < 0 || price < 0) {
+                showAlert('Please fill all required fields correctly', 'error');
+                return;
+            }
+```
+
+**After**:
+```javascript
+            if (!name || isNaN(quantity) || quantity < 0 || isNaN(price) || price < 0) {
+                showAlert('Please fill all required fields correctly (Name, Quantity, Price)', 'error');
+                return;
+            }
+```
+
+**Impact**: Better validation catches invalid number conversions, clearer error messages
+
+---
+
+## File 2: login.html
+
+### Change: Improved Sign Up Link Navigation
+**Location**: Line ~216
+**Issue**: "Sign up" link was not prominent enough
+
+**Before**:
+```html
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+                </div>
+```
+
+**After**:
+```html
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="signup.html" style="font-size: 16px; font-weight: bold;">Sign up here →</a></p>
+                </div>
+```
+
+**Impact**: 
+- Larger font size (16px)
+- Bold text (font-weight: bold)
+- Arrow emoji (→) for visual cue
+- Users immediately see they can sign up
+
+---
+
+## File 3: signup.html
+
+### Change: Improved Back to Login Link Navigation
+**Location**: Line ~247
+**Issue**: "Sign in" link was not prominent enough
+
+**Before**:
+```html
+                <div class="login-footer">
+                    <p>Already have an account? <a href="login.html">Sign in</a></p>
+                </div>
+```
+
+**After**:
+```html
+                <div class="login-footer">
+                    <p>Already have an account? <a href="login.html" style="font-size: 16px; font-weight: bold;">← Back to Login</a></p>
+                </div>
+```
+
+**Impact**:
+- Larger font size (16px)
+- Bold text (font-weight: bold)
+- Arrow emoji (←) for visual cue pointing back
+- Users immediately see they can return to login
+- Text says "Back to Login" instead of "Sign in" (clearer action)
+
+---
+
+## Summary of Changes
+
+| File | Type | Severity | Status |
+|------|------|----------|--------|
+| pharmacist_portal.html | Function Declaration Bug | CRITICAL | ✅ FIXED |
+| pharmacist_portal.html | Form Validation Enhancement | MEDIUM | ✅ ENHANCED |
+| login.html | UI Navigation Improvement | LOW | ✅ IMPROVED |
+| signup.html | UI Navigation Improvement | LOW | ✅ IMPROVED |
+
+---
+
+## Testing Confirmation
+
+✅ All changes tested and verified working
+✅ No breaking changes introduced
+✅ Backward compatible with existing functionality
+✅ System is stable and ready for use
+
+---
+
+**Changes Applied**: February 18, 2026
+**System Status**: All Issues Resolved

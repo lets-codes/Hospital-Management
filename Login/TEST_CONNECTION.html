@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hospital System - Server Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        .status-ok {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        h1 { color: #333; }
+        h2 { color: #555; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🏥 Hospital Management System</h1>
+        <h2>Server Connection Test</h2>
+    </div>
+
+    <div class="card">
+        <h3>Step 1: Did You START the Server?</h3>
+        <p>⚠️ <strong>IMPORTANT:</strong> You must START the server first!</p>
+        
+        <h4>Option A (Easiest - One-Click):</h4>
+        <p>Double-click this file:</p>
+        <pre>START_SERVER.bat</pre>
+        
+        <h4>Option B (Using Python):</h4>
+        <p>Open Command Prompt in this folder and run:</p>
+        <pre>python START_SERVER_FIXED.py</pre>
+        
+        <h4>Option C (Manual):</h4>
+        <p>Run this in Command Prompt:</p>
+        <pre>python server_patient_doctor.py</pre>
+        
+        <p style="color: red;"><strong>IMPORTANT:</strong> You should see a message like:<br/>
+        <code>Server running on http://0.0.0.0:5000/</code><br/>
+        <strong>DO NOT CLOSE that window!</strong></p>
+    </div>
+
+    <div class="card">
+        <h3>Step 2: Test Server Connection</h3>
+        <p>Click the button below to test if server is running:</p>
+        <button onclick="testServer()">Test Server Connection</button>
+        <div id="test-result"></div>
+    </div>
+
+    <div class="card">
+        <h3>Step 3: If Test Passes</h3>
+        <p>Go to: <a href="http://localhost:5000/hospital_landing.html" target="_blank"><strong>http://localhost:5000/hospital_landing.html</strong></a></p>
+        <p>Or access directly:</p>
+        <ul>
+            <li><a href="http://localhost:5000/login.html" target="_blank">Login Page</a></li>
+            <li><a href="http://localhost:5000/signup.html" target="_blank">Signup Page</a></li>
+            <li><a href="http://localhost:5000/hospital_landing.html" target="_blank">Hospital Landing</a></li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Troubleshooting</h3>
+        <div id="troubleshoot"></div>
+    </div>
+
+    <script>
+        async function testServer() {
+            const result = document.getElementById('test-result');
+            result.innerHTML = '<p>🔄 Testing...</p>';
+            
+            try {
+                // Test health endpoint
+                const response = await fetch('http://localhost:5000/health', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <p class="status-ok">✅ SERVER IS RUNNING!</p>
+                        <p>Status: ${data.status}</p>
+                        <p>Service: ${data.service}</p>
+                        <p style="color: green;"><strong>You are connected! Now go to:</strong></p>
+                        <p><a href="http://localhost:5000/hospital_landing.html" target="_blank">
+                            <button>Open Hospital System</button>
+                        </a></p>
+                    `;
+                } else {
+                    result.innerHTML = `<p class="status-error">❌ Server responded with status ${response.status}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <p class="status-error">❌ CANNOT CONNECT TO SERVER</p>
+                    <p><strong>This means:</strong></p>
+                    <ul>
+                        <li>❌ You have NOT started the server</li>
+                        <li>❌ The server is not running</li>
+                        <li>❌ Port 5000 is blocked or in use</li>
+                    </ul>
+                    <p><strong>What to do:</strong></p>
+                    <ol>
+                        <li>STOP any running server (if command prompt is open, press Ctrl+C)</li>
+                        <li>Double-click <code>START_SERVER.bat</code></li>
+                        <li>Wait for the "Server running" message</li>
+                        <li>Come back here and click "Test Server Connection" again</li>
+                    </ol>
+                    <p style="color: red;"><strong>Keep the server window OPEN!</strong></p>
+                `;
+                document.getElementById('troubleshoot').innerHTML = `
+                    <h4>Error Details:</h4>
+                    <p class="status-error">${error.message}</p>
+                `;
+            }
+        }
+        
+        // Test on page load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, checking server...');
+            testServer();
+        });
+    </script>
+</body>
+</html>

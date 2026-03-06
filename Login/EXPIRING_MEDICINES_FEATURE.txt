@@ -1,0 +1,156 @@
+# Expiring Medicines Dashboard - Implementation Summary
+
+## Overview
+Added a complete expiring medicines tracking interface to the admin portal, allowing admins to see which medicines are expired, expiring this month, or expiring within 3 months.
+
+## Changes Made
+
+### 1. CSS Styling Added (Lines 560-628)
+- `#expiringMedicinesContainer`: Grid layout for medicine cards (3-column responsive)
+- `.expiring-medicine-card`: Card styling with hover effects and shadows
+- `.card-header`: Header with medicine name and expiry badge
+- `.card-details`: Detailed information display with label-value pairs
+- `.detail-row`: Proper alignment of medicine details
+- Color-coded badge classes:
+  - `.expiry-critical` (Red): Already Expired
+  - `.expiry-warning` (Yellow): Expiring This Month
+  - `.expiry-safe` (Green): Upcoming (safe)
+
+### 2. JavaScript Functions Added
+
+#### loadExpiringMedicines() (Lines 1238-1293)
+Fetches all medicines and categorizes by expiry status:
+- **Expired**: expiry_date < today
+- **Critical**: expiry_date <= end of this month
+- **Upcoming**: expiry_date <= today + 90 days
+- Updates three stat cards with medicine counts
+- Stores medicines in `window.allExpiringMedicines` for filtering
+- Auto-displays all medicines (calls filterExpiringMedicines('all'))
+
+#### filterExpiringMedicines(category) (Lines 1295-1343)
+Filters and displays medicines based on category:
+- Parameters: 'expired', 'critical', 'upcoming', or 'all'
+- Renders medicine cards with:
+  - Medicine name with proper HTML escaping
+  - Color-coded expiry badge
+  - Days until expiry (negative for expired)
+  - SKU, Batch Number, Expiry Date
+  - Quantity, Manufacturer, Unit Price
+- Shows "No medicines found" message if empty
+
+### 3. Tab Integration (Lines 970-976)
+Modified `switchTab()` function to:
+- Call `loadExpiringMedicines()` when "Expiring Medicines" tab is clicked
+- Ensures data is fresh when switching to the tab
+
+### 4. UI Components (Already in HTML)
+- **Stat Cards** (Lines 778-791):
+  - Already Expired count
+  - Expiring This Month count
+  - Expiring in 3 Months count
+- **Filter Buttons** (Lines 793-798):
+  - Already Expired
+  - Expiring This Month
+  - Next 3 Months
+  - All Expiring
+  - Refresh button
+- **Medicine Container** (Line 800):
+  - `<div id="expiringMedicinesContainer"></div>`
+
+## Features
+
+### Real-Time Date Calculations
+- Properly normalizes dates to midnight (UTC) for accurate comparisons
+- Calculates days until expiry for display
+- Shows "X days ago" for expired medicines
+- Automatically updates when switching tabs
+
+### Visual Hierarchy
+- Color-coded badges for quick status identification
+- Cards have hover effects for better UX
+- Responsive grid layout (auto-fills with minimum 350px cards)
+- Clear typography with labels and values
+
+### Data Fields Displayed
+- Medicine Name
+- SKU
+- Batch Number
+- Expiry Date
+- Quantity (units)
+- Manufacturer
+- Unit Price
+
+## Data Sources
+
+### API Integration
+- Endpoint: `GET ${API_BASE}/api/medicines`
+- Response format: `{medicines: [{...}, {...}]}`
+- Required fields: `expiry_date`, `batch_no`
+- Works with existing medicines in database
+
+### Database
+- Uses existing `medicines` table with `expiry_date` column
+- Batch number stored in `batch_no` field
+- No new database modifications required
+
+## Date Logic
+
+The implementation uses the following date logic (matching JavaScript Date behavior):
+
+```
+Today: 2026-02-18
+This Month End: 2026-02-28
+Three Months Later: 2026-05-19
+
+Categories:
+- Expired: expiry_date < today (e.g., 2025-12-31)
+- Critical: today <= expiry_date <= this month end
+- Upcoming: this month end < expiry_date <= 3 months later
+- Safe: expiry_date > 3 months later
+```
+
+## Testing Checklist
+
+✓ API returns medicines with expiry dates
+✓ Date comparisons work correctly
+✓ Stat cards update with correct counts
+✓ Filter buttons work properly
+✓ Medicine cards render with all details
+✓ HTML escaping prevents XSS attacks
+✓ Responsive layout works on mobile
+✓ Empty state message displays when no medicines in category
+
+## Current Database Sample
+
+Total Medicines: 40
+- Already Expired: 8 medicines (expiry dates in past)
+- Expiring This Month: 0 medicines
+- Expiring in 3 Months: 0 medicines
+- With Batch Numbers: 3 medicines (BATCH-2026-001, BATCH-2026-999)
+- Without Expiry Dates: 32 medicines (not tracked)
+
+## Browser Testing Instructions
+
+1. Open admin portal: http://localhost:5000/admin_portal.html
+2. Log in as admin
+3. Click "Expiring Medicines" tab
+4. Verify stat cards show correct counts
+5. Click different filter buttons to view categories
+6. Verify medicine cards display all information
+7. Click "Refresh" button to reload data
+
+## Known Limitations
+
+- Only medicines with expiry dates are displayed in expiring tab
+- Medicines without batch numbers show "N/A"
+- Filter logic runs in-memory (suitable for current data size)
+- Updates are manual via Refresh button (can be enhanced with auto-refresh)
+
+## Future Enhancement Ideas
+
+1. Add auto-refresh interval (e.g., every 30 seconds)
+2. Add export to CSV/PDF
+3. Add email alerts for expiring medicines
+4. Add threshold settings for critical days
+5. Add historical tracking of expiry events
+6. Add wastage tracking for expired medicines

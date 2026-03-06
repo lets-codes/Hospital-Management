@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background: #90EE90; }
+        .fail { background: #FFB6C6; }
+    </style>
+</head>
+<body>
+    <h1>Doctor Dashboard Diagnostic</h1>
+    <div id="results"></div>
+
+    <script>
+        const tests = [];
+
+        async function runTests() {
+            const resultsDiv = document.getElementById('results');
+            
+            // Test 1: Check localStorage
+            try {
+                const testData = { id: 1, role: 'doctor', full_name: 'Test' };
+                localStorage.setItem('test', JSON.stringify(testData));
+                localStorage.removeItem('test');
+                addResult('localStorage', 'PASS', 'localStorage working');
+            } catch (e) {
+                addResult('localStorage', 'FAIL', e.message);
+            }
+
+            // Test 2: Check server connectivity
+            try {
+                const r = await fetch('http://localhost:5000/health');
+                if (r.ok) {
+                    addResult('Server', 'PASS', 'Server responding');
+                } else {
+                    addResult('Server', 'FAIL', `Status ${r.status}`);
+                }
+            } catch (e) {
+                addResult('Server', 'FAIL', e.message);
+            }
+
+            // Test 3: Check if doctor_dashboard.html is accessible
+            try {
+                const r = await fetch('http://localhost:5000/doctor_dashboard.html');
+                if (r.ok) {
+                    addResult('doctor_dashboard.html', 'PASS', 'Page accessible');
+                } else {
+                    addResult('doctor_dashboard.html', 'FAIL', `Status ${r.status}`);
+                }
+            } catch (e) {
+                addResult('doctor_dashboard.html', 'FAIL', e.message);
+            }
+
+            // Test 4: Check tab switching function
+            if (typeof switchTab === 'function') {
+                addResult('switchTab function', 'OK', 'Function exists in memory');
+            } else {
+                addResult('switchTab function', 'CHECK', 'Not loaded yet (expected)');
+            }
+
+            // Test 5: Create test account
+            try {
+                const testDoctor = {
+                    role: 'doctor',
+                    fullname: `Test_Doc_${Date.now()}`,
+                    email: `test_${Date.now()}@test.com`,
+                    phone: '9999999999',
+                    password: 'test123',
+                    specialization: 'Medicine',
+                    license_number: 'TEST123',
+                    experience_years: 5,
+                    consultation_fee: 500
+                };
+                const r = await fetch('http://localhost:5000/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testDoctor)
+                });
+                const data = await r.json();
+                if (data.user_id) {
+                    addResult('Create Doctor Account', 'PASS', `ID: ${data.user_id}`);
+                } else {
+                    addResult('Create Doctor Account', 'FAIL', JSON.stringify(data).substring(0, 100));
+                }
+            } catch (e) {
+                addResult('Create Doctor Account', 'FAIL', e.message);
+            }
+
+            resultsDiv.innerHTML += '<h2>Tests Complete</h2>';
+        }
+
+        function addResult(name, status, message) {
+            const div = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test ' + (status === 'PASS' ? 'pass' : (status === 'FAIL' ? 'fail' : ''));
+            testDiv.textContent = `${name}: ${status} - ${message}`;
+            div.appendChild(testDiv);
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

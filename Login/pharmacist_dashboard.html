@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacist Dashboard - Hospital and community Pharmacy management</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:#f4f6fb;color:#222}
+        nav{background:linear-gradient(135deg,#667eea,#764ba2);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+        .logo{font-weight:700}
+        .container{max-width:1200px;margin:2rem auto;padding:1rem}
+        .grid{display:grid;grid-template-columns:1fr 360px;gap:1rem}
+        .card{background:#fff;padding:1rem;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+        h2{font-size:1.25rem;margin-bottom:.5rem}
+        .form-row{display:flex;gap:.5rem;margin-bottom:.5rem}
+        .form-row input, .form-row select{flex:1;padding:.5rem;border:1px solid #ddd;border-radius:6px}
+        .btn{padding:.6rem .9rem;border-radius:6px;border:none;cursor:pointer}
+        .btn-primary{background:#667eea;color:#fff}
+        table{width:100%;border-collapse:collapse;margin-top:.5rem}
+        th,td{padding:.6rem;border-bottom:1px solid #eee;text-align:left}
+        .small{font-size:.9rem;color:#666}
+        .stats{display:flex;gap:.75rem;margin-bottom:.75rem}
+        .stat{background:#fff;padding:.6rem;border-radius:8px;flex:1;text-align:center}
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">🏥 Hospital and community Pharmacy management - Pharmacist</div>
+        <div class="nav-actions">
+            <button class="btn" onclick="window.location.href='hospital_landing.html'">Visit Site</button>
+            <button class="btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="grid">
+            <div>
+                <div class="card">
+                    <h2>Register New Medicine</h2>
+                    <div class="small">Add new medicine to inventory</div>
+                    <div style="margin-top:.75rem">
+                        <div class="form-row">
+                            <input id="med_name" placeholder="Medicine name" />
+                            <input id="med_batch" placeholder="Batch / SKU" />
+                        </div>
+                        <div class="form-row">
+                            <input id="med_qty" type="number" placeholder="Quantity" />
+                            <input id="med_price" type="number" placeholder="Price" />
+                        </div>
+                        <div class="form-row">
+                            <select id="med_category">
+                                <option value="">Select category</option>
+                                <option>Antibiotic</option>
+                                <option>Analgesic</option>
+                                <option>Vitamins</option>
+                                <option>Supplements</option>
+                                <option>Other</option>
+                            </select>
+                            <input id="med_reorder" type="number" placeholder="Reorder level" />
+                        </div>
+                        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.5rem">
+                            <button class="btn" id="clearBtn">Clear</button>
+                            <button class="btn btn-primary" id="addMedBtn">Add Medicine</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:1rem">
+                    <h2>Inventory</h2>
+                    <div class="small">Current medicine stock</div>
+                    <table id="inventoryTable">
+                        <thead><tr><th>Name</th><th>Batch</th><th>Qty</th><th>Price</th><th>Reorder</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <h2>Quick Actions</h2>
+                    <div class="small">Tools for pharmacy management</div>
+                    <div style="margin-top:.75rem">
+                        <button class="btn btn-primary" onclick="generateReport()">Export Inventory (CSV)</button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:1rem">
+                    <h2>Low Stock</h2>
+                    <div class="small">Medicines at or below reorder level</div>
+                    <ul id="lowStockList" style="margin-top:.5rem"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Wire the dashboard to backend API
+        const API_URL = 'http://localhost:5000';
+        let editingId = null;
+
+        function getCurrentUser(){
+            try{return JSON.parse(localStorage.getItem('user'))||null}catch(e){return null}
+        }
+
+        async function fetchInventory(){
+            try{
+                const r = await fetch(API_URL + '/api/medicines');
+                if(!r.ok) throw new Error('API error ' + r.status);
+                const data = await r.json();
+                return data.medicines || [];
+            }catch(e){console.error('Fetch inventory error', e);return []}
+        }
+
+        function renderList(list){
+            const tbody=document.querySelector('#inventoryTable tbody'); tbody.innerHTML='';
+            list.forEach(m=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML = `<td>${m.name}</td><td>${m.sku||m.batch_no||''}</td><td>${m.quantity}</td><td>${m.unit_price}</td><td></td><td><button onclick="startEdit(${m.id})">Edit</button> <button onclick="deleteMed(${m.id})">Remove</button></td>`;
+                tbody.appendChild(tr);
+            });
+            renderLowStock(list);
+        }
+
+        async function loadAndRender(){
+            const list = await fetchInventory();
+            renderList(list);
+        }
+
+        async function addOrUpdateMed(){
+            const user = getCurrentUser();
+            if(!user){alert('Please login as pharmacist or admin'); return}
+
+            const payload = {
+                actor_id: user.id,
+                name: document.getElementById('med_name').value.trim(),
+                sku: document.getElementById('med_batch').value.trim(),
+                manufacturer: document.getElementById('med_category').value,
+                quantity: parseInt(document.getElementById('med_qty').value) || 0,
+                unit_price: parseFloat(document.getElementById('med_price').value) || 0.0
+            };
+
+            if(!payload.name){ alert('Enter medicine name'); return }
+
+            try{
+                if(editingId){
+                    const res = await fetch(API_URL + '/api/medicines/' + editingId, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    if(!res.ok) throw new Error('Update failed ' + res.status);
+                    editingId = null;
+                } else {
+                    const res = await fetch(API_URL + '/api/medicines', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                    if(!res.ok) throw new Error('Create failed ' + res.status);
+                }
+                clearForm();
+                await loadAndRender();
+            }catch(e){console.error(e);alert('Error saving medicine: '+e.message)}
+        }
+
+        function clearForm(){['med_name','med_batch','med_qty','med_price','med_reorder'].forEach(id=>document.getElementById(id).value='');document.getElementById('med_category').selectedIndex=0; editingId = null}
+
+        function startEdit(id){
+            // fetch single med then populate form
+            fetch(API_URL + '/api/medicines')
+                .then(r=>r.json())
+                .then(data=>{
+                    const m = (data.medicines||[]).find(x=>x.id===id);
+                    if(m){
+                        document.getElementById('med_name').value = m.name || '';
+                        document.getElementById('med_batch').value = m.sku || m.batch_no || '';
+                        document.getElementById('med_qty').value = m.quantity || 0;
+                        document.getElementById('med_price').value = m.unit_price || 0;
+                        document.getElementById('med_category').value = m.manufacturer || '';
+                        editingId = id;
+                    }
+                }).catch(e=>console.error(e));
+        }
+
+        async function deleteMed(id){
+            const user = getCurrentUser();
+            if(!user){alert('Please login as admin to delete'); return}
+            if(!confirm('Delete medicine id ' + id + '?')) return;
+            try{
+                const res = await fetch(API_URL + '/api/medicines/' + id, { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ actor_id: user.id }) });
+                if(!res.ok) throw new Error('Delete failed ' + res.status);
+                await loadAndRender();
+            }catch(e){console.error(e);alert('Error deleting: '+e.message)}
+        }
+
+        function renderLowStock(list){
+            const ul=document.getElementById('lowStockList'); ul.innerHTML='';
+            const threshold = 10; // simple threshold
+            (list||[]).filter(m=>m.quantity<=threshold).forEach(m=>{const li=document.createElement('li'); li.textContent = `${m.name} — Qty: ${m.quantity}`; ul.appendChild(li)});
+        }
+
+        function generateReport(){
+            // export current table to CSV
+            fetch(API_URL + '/api/medicines').then(r=>r.json()).then(data=>{
+                const list = data.medicines || [];
+                if(!list.length){alert('No data to export'); return}
+                const csv = ['Name,Batch,Qty,Price,Manufacturer', ...list.map(m=>`"${m.name}","${m.sku||m.batch_no||''}",${m.quantity},${m.unit_price},"${m.manufacturer||''}"`)];
+                const blob=new Blob([csv.join('\n')],{type:'text/csv'});
+                const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='inventory.csv'; a.click(); URL.revokeObjectURL(url);
+            }).catch(e=>{console.error(e); alert('Export error')});
+        }
+
+        document.getElementById('addMedBtn').addEventListener('click', addOrUpdateMed);
+        document.getElementById('clearBtn').addEventListener('click', clearForm);
+        function logout(){localStorage.removeItem('user');localStorage.removeItem('isLoggedIn');window.location.href='login.html'}
+
+        // Initial load
+        loadAndRender();
+    </script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!-- Quick Start Guide -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Guide - Login System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 16px; }
+        .content {
+            padding: 40px 30px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .checklist {
+            list-style: none;
+        }
+        .checklist li {
+            padding: 10px;
+            margin: 10px 0;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+        .checklist li:before {
+            content: "□";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            color: #667eea;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .highlight {
+            background: #fffacd;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            color: #155724;
+            margin: 15px 0;
+        }
+        .error {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+            margin: 15px 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background: #5a6268; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9ff;
+            color: #667eea;
+            font-weight: 600;
+        }
+        tr:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Login System Setup Guide</h1>
+            <p>Complete step-by-step instructions to get your secure login system running</p>
+        </div>
+
+        <div class="content">
+            <!-- Prerequisites -->
+            <div class="section">
+                <h2>📋 Prerequisites Checklist</h2>
+                <p>Before starting, make sure you have these installed:</p>
+                <ul class="checklist">
+                    <li>Node.js (v12+) - <a href="https://nodejs.org/" target="_blank">Download</a></li>
+                    <li>MySQL Server (v5.7+) - <a href="https://dev.mysql.com/downloads/mysql/" target="_blank">Download</a></li>
+                    <li>npm (comes with Node.js)</li>
+                    <li>A text editor (VS Code recommended)</li>
+                </ul>
+            </div>
+
+            <!-- Step 1: Database Setup -->
+            <div class="section">
+                <h2>Step 1️⃣ Create the MySQL Database</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Open MySQL Command Line or Workbench</h3>
+                    <p>Start your MySQL server first, then open the command line or GUI.</p>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Run the database initialization script</h3>
+                    <p>Copy and paste the entire SQL code below:</p>
+                    <div class="code-block">-- Create database
+CREATE DATABASE IF NOT EXISTS login_system;
+USE login_system;
+
+CREATE TABLE IF NOT EXISTS information_store (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+);</div>
+                </div>
+
+                <div class="success">
+                    ✓ If you see "Query OK", the database has been created successfully!
+                </div>
+            </div>
+
+            <!-- Step 2: Node.js Setup -->
+            <div class="section">
+                <h2>Step 2️⃣ Install Node.js Dependencies</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Open Command Prompt/Terminal</h3>
+                    <p>Navigate to the Login folder using:</p>
+                    <div class="code-block">cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"</div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Install dependencies</h3>
+                    <p>Run the following command:</p>
+                    <div class="code-block">npm install</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 14px;">This will install all required packages (Express, MySQL, bcrypt, etc.)</p>
+                </div>
+
+                <div class="success">
+                    ✓ You should see a "node_modules" folder created and a "package-lock.json" file
+                </div>
+            </div>
+
+            <!-- Step 3: Configure Database -->
+            <div class="section">
+                <h2>Step 3️⃣ Configure Database Connection</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Edit server.js file</h3>
+                    <p>Open the server.js file in your text editor and find this section:</p>
+                    <div class="code-block">const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',      // Your MySQL username
+    password: '',      // Your MySQL password
+    database: 'login_system'
+});</div>
+                    <p style="margin-top: 10px;"><strong>Update these values based on your MySQL setup:</strong></p>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Default</th>
+                            <th>What to Enter</th>
+                        </tr>
+                        <tr>
+                            <td>host</td>
+                            <td>localhost</td>
+                            <td>Usually 'localhost' or '127.0.0.1'</td>
+                        </tr>
+                        <tr>
+                            <td>user</td>
+                            <td>root</td>
+                            <td>Your MySQL username (usually 'root')</td>
+                        </tr>
+                        <tr>
+                            <td>password</td>
+                            <td>(empty)</td>
+                            <td>Your MySQL password (leave empty if no password)</td>
+                        </tr>
+                        <tr>
+                            <td>database</td>
+                            <td>login_system</td>
+                            <td>Keep as 'login_system' (the database you created)</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="highlight">
+                    💡 <strong>Pro Tip:</strong> If you set a password for MySQL, place it in the password field: <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">password: 'yourpassword'</code>
+                </div>
+            </div>
+
+            <!-- Step 4: Run Server -->
+            <div class="section">
+                <h2>Step 4️⃣ Start the Server</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Run the Node.js server</h3>
+                    <p>In the same command prompt, type:</p>
+                    <div class="code-block">npm start</div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Verify server is running</h3>
+                    <p>If successful, you should see:</p>
+                    <div class="code-block">Connected to SQL Database
+Server running on port 3000</div>
+                </div>
+
+                <div class="success">
+                    ✓ The server is now running on http://localhost:3000
+                </div>
+            </div>
+
+            <!-- Step 5: Access Application -->
+            <div class="section">
+                <h2>Step 5️⃣ Access the Application</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Open your web browser</h3>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Visit these URLs:</h3>
+                    <table>
+                        <tr>
+                            <th>Page</th>
+                            <th>URL</th>
+                        </tr>
+                        <tr>
+                            <td>Sign Up (Create Account)</td>
+                            <td><a href="http://localhost:3000/signup.html" target="_blank">http://localhost:3000/signup.html</a></td>
+                        </tr>
+                        <tr>
+                            <td>Login</td>
+                            <td><a href="http://localhost:3000/login.html" target="_blank">http://localhost:3000/login.html</a></td>
+                        </tr>
+                        <tr>
+                            <td>Home (After Login)</td>
+                            <td><a href="http://localhost:3000/home.html" target="_blank">http://localhost:3000/home.html</a></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="success">
+                    ✓ You should now see the login interface!
+                </div>
+            </div>
+
+            <!-- Step 6: Test -->
+            <div class="section">
+                <h2>Step 6️⃣ Test the System</h2>
+
+                <div class="step">
+                    <h3>Create a Test Account</h3>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Go to Sign Up page</li>
+                        <li>Enter test details:
+                            <ul style="margin: 10px 0;">
+                                <li>Name: <code>Test User</code></li>
+                                <li>Email: <code>test@example.com</code></li>
+                                <li>Password: <code>test123456</code></li>
+                            </ul>
+                        </li>
+                        <li>Click "Sign Up"</li>
+                        <li>You'll be redirected to login page</li>
+                    </ul>
+                </div>
+
+                <div class="step">
+                    <h3>Login with Test Account</h3>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Fill in:
+                            <ul style="margin: 10px 0;">
+                                <li>Email: <code>test@example.com</code></li>
+                                <li>Password: <code>test123456</code></li>
+                            </ul>
+                        </li>
+                        <li>Click "Sign In"</li>
+                        <li>You should see your profile on the Home page</li>
+                    </ul>
+                </div>
+
+                <div class="success">
+                    ✓ Congratulations! Your login system is working!
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section">
+                <h2>🐛 Troubleshooting</h2>
+
+                <div class="step" style="margin-bottom: 15px;">
+                    <h3>❌ "Cannot GET /signup.html"</h3>
+                    <p><strong>Solution:</strong> Make sure the server is running. Use <code style="background: #f0f0f0; padding: 2px 6px;">npm start</code> if you stopped it.</p>
+                </div>
+
+                <div class="step" style="margin-bottom: 15px;">
+                    <h3>❌ "Connected to SQL Database" not showing</h3>
+                    <p><strong>Solution:</strong> Check if MySQL is running and your credentials are correct in server.js. You might need to:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Start MySQL server</li>
+                        <li>Check your username and password</li>
+                        <li>Verify the database name is 'login_system'</li>
+                    </ul>
+                </div>
+
+                <div class="step" style="margin-bottom: 15px;">
+                    <h3>❌ "npm install" fails</h3>
+                    <p><strong>Solution:</strong> Delete node_modules folder and package-lock.json, then run <code style="background: #f0f0f0; padding: 2px 6px;">npm install</code> again</p>
+                </div>
+
+                <div class="step" style="margin-bottom: 15px;">
+                    <h3>❌ "Email already registered" when signing up</h3>
+                    <p><strong>Solution:</strong> The email already exists. Try with a different email address.</p>
+                </div>
+
+                <div class="step">
+                    <h3>❌ "Invalid email or password" when logging in</h3>
+                    <p><strong>Solution:</strong> Check your credentials. Passwords are case-sensitive. Make sure the account was created first.</p>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="section">
+                <h2>✨ Features</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">🔒 Secure</h3>
+                        <p>Passwords hashed with bcrypt. Never stored in plain text.</p>
+                    </div>
+                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">✔️ Validated</h3>
+                        <p>Email format and password strength validation.</p>
+                    </div>
+                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">🗄️ MySQL</h3>
+                        <p>All user data securely stored in MySQL database.</p>
+                    </div>
+                    <div style="background: #f8f9ff; padding: 20px; border-radius: 8px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">🎨 Modern UI</h3>
+                        <p>Clean, responsive design that works on all devices.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="section">
+                <h2>📚 Next Steps</h2>
+                <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Optional Enhancements:</h3>
+                    <ul style="padding-left: 20px;">
+                        <li><strong>Password Reset:</strong> Add email-based password recovery</li>
+                        <li><strong>Email Verification:</strong> Require email confirmation on signup</li>
+                        <li><strong>Two-Factor Authentication:</strong> Add extra security layer</li>
+                        <li><strong>User Profile:</strong> Allow users to update their information</li>
+                        <li><strong>JWT Tokens:</strong> Replace localStorage with secure JWT authentication</li>
+                        <li><strong>Rate Limiting:</strong> Protect against brute force attacks</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contact & Support -->
+            <div class="section" style="border-top: 2px solid #f0f0f0; padding-top: 30px;">
+                <h2>💬 Need Help?</h2>
+                <p>Check the <strong>README.md</strong> file for detailed documentation, API endpoints, and security notes.</p>
+                <div class="button-group">
+                    <a href="README.md" class="btn btn-primary">📖 Read Full Documentation</a>
+                    <a href="http://localhost:3000/login.html" class="btn btn-secondary">🚀 Go to Login Page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+IDENTIFIED ISSUES IN PHARMACIST & ADMIN PORTAL SYSTEM
+
+================================================================================
+Issue #1: Approval Endpoint Missing Updated Stock Data
+================================================================================
+- Location: server_patient_doctor.py, api_approve_restock_request()
+- Problem: Endpoint returns only a message, not the updated stock quantities
+- Impact: Admin portal can't display "old stock" → "new stock" feedback
+- Fix: Return the updated medicine with old/new quantities
+
+Current Response:
+{
+    "message": "Restock request approved and inventory updated"
+}
+
+Expected Response:
+{
+    "message": "Restock request approved and inventory updated",
+    "old_quantity": 5,
+    "new_quantity": 105,
+    "added_quantity": 100,
+    "medicine_name": "Medicine Name"
+}
+
+================================================================================
+Issue #2: Rejection Endpoint Uses Wrong Parameter Name
+================================================================================
+- Location: server_patient_doctor.py, api_reject_restock_request()
+- Problem: Uses 'admin_notes' but should use 'rejection_reason'
+- Impact: Admin can't provide rejection reasons properly
+- Current Code:
+  admin_notes = data.get('admin_notes', 'Request rejected')
+  
+- Fix: Change to:
+  rejection_reason = data.get('rejection_reason', 'Request rejected')
+
+================================================================================
+Issue #3: Pharmacist Portal - Missing Pending Request Display
+================================================================================
+- Location: pharmacist_portal.html
+- Problem: The portal shows pending request count but doesn't show request details/status
+- Impact: Pharmacist can't see why their request was rejected or when it was approved
+- Fix: Add a "View Requests" section to show submitted requests with status
+
+================================================================================
+Issue #4: Admin Portal - New Requests Not Showing Without Refresh
+================================================================================
+- Location: admin_portal.html
+- Problem: Real-time updates might not work for newly submitted requests
+- Impact: Admin might not see new requests appear automatically
+- Fix: Ensure refreshRequests() is called regularly or after page interactions
+
+================================================================================
+Issue #5: Search Functionality Not Working in Pharmacist Portal
+================================================================================
+- Location: pharmacist_portal.html
+- Problem: Search filter might not be properly handling the filter
+- Impact: Pharmacist can't quickly find medicines by name
+- Fix: Check searchBox event listener implementation
+
+================================================================================
+Issue #6: Stock Status Color Coding
+================================================================================
+- Location: Both portals
+- Problem: Low stock threshold is hardcoded to 10 units
+- Impact: Some medicines might not be flagged as low stock if threshold should be different
+- Fix: Consider making this configurable or adjusting based on medicine type
+
+================================================================================
+Issue #7: Modal Focus and Accessibility
+================================================================================
+- Location: Both portals
+- Problem: Modals might not properly handle Escape key or focus management
+- Impact: User experience issues with modal interaction
+- Fix: Add proper keyboard event handlers for modals
+
+================================================================================
+Issue #8: Error Message Handling in Portals
+================================================================================
+- Location: Both pharmacist_portal.html and admin_portal.html
+- Problem: Some error messages might not be user-friendly
+- Impact: Users get technical error messages instead of actionable feedback
+- Fix: Improve error handling and messages
+
+================================================================================
+Issue #9: Restock Request Modal - Missing Validation
+================================================================================
+- Location: pharmacist_portal.html, openRestockModal()
+- Problem: Modal doesn't validate if medicine quantity is loaded before showing
+- Impact: User might see "undefined" or "0" for current quantity
+- Fix: Add proper validation and loading state
+
+================================================================================
+Issue #10: Admin Portal - Sorting and Filtering
+================================================================================
+- Location: admin_portal.html, filterRequests()
+- Problem: Requests might not be sorted by date (newest first)
+- Impact: Admin has trouble finding specific requests among many
+- Fix: Add sorting by request date, with newest first
+
+================================================================================
+
+PRIORITY FIXES (MUST DO):
+1. Issue #1: Fix approval response to include updated quantities
+2. Issue #2: Fix rejection endpoint parameter name
+3. Issue #3: Add pending request view to pharmacist portal
+4. Issue #4: Ensure real-time updates in admin portal
+
+NICE-TO-HAVE FIXES:
+5. Issue #5: Fix search functionality
+6. Issue #6: Review stock thresholds
+7. Issue #7: Improve modal UX
+8. Issue #8: Better error messages
+9. Issue #9: Validate restock modal
+10. Issue #10: Add sorting to admin request list

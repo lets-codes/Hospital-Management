@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital and community Pharmacy management - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+        }
+
+        .loading-container {
+            background: rgba(255,255,255,0.98);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+            max-width: 820px; width: 100%; display: grid; gap: 16px;
+            grid-template-columns: 1fr; align-items: center;
+        }
+
+        .brand {
+            display:flex; align-items:center; gap:12px; justify-content:center;
+        }
+        .brand .logo { font-size: 28px; }
+        .brand .name { font-weight:700; color:#222; font-size:1.1rem; }
+
+        .spinner { width: 56px; height: 56px; border: 6px solid rgba(0,0,0,0.06); border-top: 6px solid #667eea; border-radius: 50%; margin: 6px auto; animation: spin 1s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0deg);}100%{transform:rotate(360deg);} }
+
+        h2 { color:#222; font-size:1.6rem; margin-top:6px; }
+        p { color:#555; font-size:1rem; }
+
+        .actions { display:flex; gap:12px; justify-content:center; margin-top:6px; }
+        .btn { padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+        .btn-primary { background:#667eea; color:white; }
+        .btn-secondary { background:transparent; color:#667eea; border:2px solid rgba(102,126,234,0.18); }
+
+        .error { background:#fff3cd; border:1px solid #fe7c5f; border-radius:8px; padding:14px; margin-top:8px; color:#856404; text-align:left; }
+
+        .redirect-info { margin-top:8px; padding:12px; background:#f8f9fa; border-radius:8px; }
+        .redirect-info p { color:#666; font-size:0.95rem; }
+
+        @media (min-width:900px) {
+            .loading-container { grid-template-columns: 1fr 360px; padding:36px; }
+            .left { text-align:left; padding:12px 24px; }
+            .right { display:flex; flex-direction:column; align-items:center; gap:12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <div class="left">
+            <div class="brand">
+                <div class="logo">🏥</div>
+                <div class="name">Hospital and community Pharmacy management</div>
+            </div>
+            <h2>Welcome!</h2>
+            <p id="loadingText">Loading your dashboard...</p>
+            <div class="redirect-info" id="info"></div>
+            <div id="error"></div>
+        </div>
+        <div class="right">
+            <div class="spinner" aria-hidden="true"></div>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="window.location.href='hospital_landing.html'">Visit Site</button>
+                <button class="btn btn-secondary" onclick="window.location.href='login.html'">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Redirect based on user role
+        function redirectToDashboard() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const userData = localStorage.getItem('user');
+
+            if (!isLoggedIn || !userData) {
+                document.getElementById('loadingText').textContent = 'Redirecting to login...';
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+                return;
+            }
+
+            try {
+                const user = JSON.parse(userData);
+                const role = user.role || 'patient';
+
+                document.getElementById('loadingText').textContent = `Loading ${role} dashboard...`;
+                document.getElementById('info').innerHTML = `
+                    <p><strong>Role:</strong> ${role === 'doctor' ? '👨‍⚕️ Doctor' : '🏥 Patient'}</p>
+                    <p><strong>Name:</strong> ${user.full_name || user.name || 'User'}</p>
+                `;
+
+                setTimeout(() => {
+                    if (role === 'doctor') {
+                            window.location.href = 'doctor_dashboard.html';
+                        } else if (role === 'admin') {
+                            window.location.href = 'admin_dashboard.html';
+                        } else if (role === 'pharmacist') {
+                            window.location.href = 'pharmacist_dashboard.html';
+                        } else {
+                            window.location.href = 'patient_dashboard.html';
+                        }
+                }, 2000);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('error').innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> Failed to load dashboard. Please try logging in again.
+                    </div>
+                `;
+                document.getElementById('loadingText').textContent = 'Redirecting to login...';
+                setTimeout(() => {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('isLoggedIn');
+                    window.location.href = 'login.html';
+                }, 3000);
+            }
+        }
+
+        // Start redirect on page load
+        window.addEventListener('load', redirectToDashboard);
+    </script>
+</body>
+

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Hospital and community Pharmacy management</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:#f4f6fb;color:#222}
+        nav{background:linear-gradient(135deg,#667eea,#764ba2);padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+        .logo{font-weight:700}
+        .container{max-width:1200px;margin:2rem auto;padding:1rem}
+        .tabs{display:flex;gap:.5rem;border-bottom:2px solid #e0e0e0;margin-bottom:1rem}
+        .tab-btn{padding:.75rem 1.25rem;border:none;background:none;cursor:pointer;color:#666;font-weight:500}
+        .tab-btn.active{color:#667eea;border-bottom:3px solid #667eea;margin-bottom:-2px}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+        .card{background:#fff;padding:1rem;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+        h2{font-size:1.25rem;margin-bottom:.5rem}
+        .form-row{display:flex;gap:.5rem;margin-bottom:.5rem}
+        .form-row input, .form-row select{flex:1;padding:.5rem;border:1px solid #ddd;border-radius:6px}
+        .btn{padding:.6rem .9rem;border-radius:6px;border:none;cursor:pointer}
+        .btn-primary{background:#667eea;color:#fff}
+        table{width:100%;border-collapse:collapse;margin-top:.5rem}
+        th,td{padding:.6rem;border-bottom:1px solid #eee;text-align:left}
+        .small{font-size:.9rem;color:#666}
+        .btn-sm{padding:.4rem .6rem;font-size:.85rem;margin:0 .2rem}
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">Hospital and community Pharmacy management - Admin</div>
+        <div class="nav-actions">
+            <button class="btn" onclick="window.location.href='hospital_landing.html'">Visit Site</button>
+            <button class="btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('users')">User Management</button>
+            <button class="tab-btn" onclick="switchTab('settings')">Hospital Settings</button>
+        </div>
+
+        <!-- User Management Tab -->
+        <div id="users" class="tab-content active">
+            <div class="card">
+                <h2>All Users</h2>
+                <div class="small">Manage user accounts and roles</div>
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Hospital Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="card">
+                <h2>Hospital Settings</h2>
+                <div class="small">Configure hospital information and operational settings</div>
+                <div style="margin-top:1rem">
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Address:</label>
+                        <input id="set_address" placeholder="Hospital address" />
+                    </div>
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Phone:</label>
+                        <input id="set_phone" placeholder="+1-800-HEALTH-1" />
+                    </div>
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Email:</label>
+                        <input id="set_email" placeholder="admin@hospital.local" />
+                    </div>
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Hours:</label>
+                        <input id="set_hours" placeholder="24/7 or opening hours" />
+                    </div>
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Max Patients/Day:</label>
+                        <input id="set_max_patients" type="number" placeholder="150" />
+                    </div>
+                    <div class="form-row">
+                        <label style="flex-basis:120px">Avg Consultation (min):</label>
+                        <input id="set_consult_time" type="number" placeholder="30" />
+                    </div>
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+                        <button class="btn" onclick="loadSettings()">Reload</button>
+                        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for editing role -->
+    <div id="roleModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999">
+        <div style="background:#fff;margin:100px auto;padding:2rem;width:90%;max-width:400px;border-radius:8px">
+            <h3>Update User Role</h3>
+            <div style="margin:1rem 0">
+                <label>New Role:</label>
+                <select id="newRoleSelect" style="width:100%;padding:.5rem;border:1px solid #ddd;border-radius:6px;margin-top:.5rem">
+                    <option value="patient">Patient</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="pharmacist">Pharmacist</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:.5rem;justify-content:flex-end">
+                <button class="btn" onclick="closeRoleModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmRoleChange()">Update Role</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentEditUserId = null;
+
+        function getCurrentUser(){
+            try{return JSON.parse(localStorage.getItem('user'))||null}catch(e){return null}
+        }
+
+        function switchTab(tabName){
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if(tabName === 'users'){
+                loadUsers();
+            } else if(tabName === 'settings'){
+                loadSettings();
+            }
+        }
+
+        async function loadUsers(){
+            const user = getCurrentUser();
+            if(!user){alert('Please login as admin'); return}
+
+            try{
+                const r = await fetch(API_URL + '/api/admin/users?actor_id=' + user.id);
+                if(!r.ok) throw new Error('API error ' + r.status);
+                const data = await r.json();
+                const users = data.users || [];
+
+                const tbody = document.querySelector('#usersTable tbody');
+                tbody.innerHTML = '';
+                users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.full_name}</td>
+                        <td>${u.email}</td>
+                        <td>${u.phone || ''}</td>
+                        <td>${u.role}</td>
+                        <td>
+                            <button class="btn btn-sm" onclick="editUserRole(${u.id})">Change Role</button>
+                            ${u.id !== user.id ? `<button class="btn btn-sm" onclick="deleteUser(${u.id})">Delete</button>` : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }catch(e){console.error(e);alert('Error loading users: '+e.message)}
+        }
+
+        function editUserRole(userId){
+            currentEditUserId = userId;
+            document.getElementById('roleModal').style.display = 'block';
+        }
+
+        function closeRoleModal(){
+            document.getElementById('roleModal').style.display = 'none';
+            currentEditUserId = null;
+        }
+
+        async function confirmRoleChange(){
+            const user = getCurrentUser();
+            const newRole = document.getElementById('newRoleSelect').value;
+
+            try{
+                const r = await fetch(API_URL + '/api/admin/user/' + currentEditUserId + '/role', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ actor_id: user.id, role: newRole })
+                });
+                if(!r.ok) throw new Error('Update failed ' + r.status);
+                closeRoleModal();
+                await loadUsers();
+            }catch(e){console.error(e);alert('Error updating role: '+e.message)}
+        }
+
+        async function deleteUser(userId){
+            const user = getCurrentUser();
+            if(!confirm('Delete this user? This cannot be undone.')) return;
+
+            try{
+                const r = await fetch(API_URL + '/api/admin/user/' + userId, {
+                    method: 'DELETE',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ actor_id: user.id })
+                });
+                if(!r.ok) throw new Error('Delete failed ' + r.status);
+                await loadUsers();
+            }catch(e){console.error(e);alert('Error deleting user: '+e.message)}
+        }
+
+        async function loadSettings(){
+            try{
+                const r = await fetch(API_URL + '/api/admin/settings');
+                if(!r.ok) throw new Error('API error ' + r.status);
+                const data = await r.json();
+                const s = data.settings || {};
+
+                document.getElementById('set_address').value = s.address || '';
+                document.getElementById('set_phone').value = s.phone || '';
+                document.getElementById('set_email').value = s.email || '';
+                document.getElementById('set_hours').value = s.operating_hours || '';
+                document.getElementById('set_max_patients').value = s.max_patients_per_day || '';
+                document.getElementById('set_consult_time').value = s.average_consultation_time || '';
+            }catch(e){console.error(e);alert('Error loading settings: '+e.message)}
+        }
+
+        async function saveSettings(){
+            const user = getCurrentUser();
+            const payload = {
+                actor_id: user.id,
+                address: document.getElementById('set_address').value.trim(),
+                phone: document.getElementById('set_phone').value.trim(),
+                email: document.getElementById('set_email').value.trim(),
+                operating_hours: document.getElementById('set_hours').value.trim(),
+                max_patients_per_day: parseInt(document.getElementById('set_max_patients').value) || 0,
+                average_consultation_time: parseInt(document.getElementById('set_consult_time').value) || 0
+            };
+
+            try{
+                const r = await fetch(API_URL + '/api/admin/settings', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(!r.ok) throw new Error('Save failed ' + r.status);
+                alert('Hospital settings saved successfully');
+            }catch(e){console.error(e);alert('Error saving settings: '+e.message)}
+        }
+
+        function logout(){localStorage.removeItem('user');localStorage.removeItem('isLoggedIn');window.location.href='login.html'}
+
+        // Initial load
+        loadUsers();
+    </script>;
+        function clearAll(){if(!confirm('Clear demo data?'))return;localStorage.removeItem(usersKey);localStorage.removeItem('pharmacy_inventory_v1');renderUsers();alert('Cleared')}
+        function logout(){localStorage.removeItem('user');localStorage.removeItem('isLoggedIn');window.location.href='login.html'}
+        // init
+        const s=JSON.parse(localStorage.getItem(settingsKey)||'{}');if(s.site_name)document.getElementById('site_name').value=s.site_name; if(s.contact_email)document.getElementById('contact_email').value=s.contact_email;renderUsers();
+    </script>
+</body>
+</html>

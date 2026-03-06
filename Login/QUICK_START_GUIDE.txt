@@ -1,0 +1,124 @@
+# Quick Start Guide - Expiring Medicines Feature
+
+## What Was Implemented
+
+Your expiring medicines tracking dashboard is now complete! Admins can now:
+- View which medicines are expired
+- See medicines expiring this month
+- Track medicines expiring within 3 months
+- Filter by category
+- See batch numbers and expiry dates
+
+## How to Test It
+
+### Step 1: Make Sure Server is Running
+```bash
+python server_patient_doctor.py
+```
+You should see: `Running on http://0.0.0.0:5000`
+
+### Step 2: Open Admin Portal
+Navigate to: **http://localhost:5000/admin_portal.html**
+
+### Step 3: Log In
+- Use admin credentials
+- You should see three tabs at the top
+
+### Step 4: Click "Expiring Medicines" Tab
+- You'll see three stat cards at the top
+- Shows: Already Expired (8), Expiring This Month (0), Expiring in 3 Months (0)
+
+### Step 5: Try the Filters
+- Click "Already Expired" - shows 8 expired medicines
+- Click "Expiring This Month" - shows no medicines
+- Click "Next 3 Months" - shows no medicines
+- Click "All Expiring" - shows all medicines with expiry dates
+- Click "Refresh" - reloads data from server
+
+### Step 6: View Medicine Details
+Each card shows:
+- Medicine name
+- Days until expiry (or days since expiry)
+- SKU, Batch Number, Expiry Date
+- Quantity, Manufacturer, Price
+
+## What Changed in Code
+
+### File: admin_portal.html
+
+**Added CSS (69 lines)**
+- Styling for medicine cards
+- Color-coded badges (red=expired, yellow=this month, green=safe)
+- Responsive grid layout
+
+**Added JavaScript (150+ lines)**
+Two main functions:
+1. `loadExpiringMedicines()` - Fetches and categorizes medicines
+2. `filterExpiringMedicines(category)` - Displays filtered medicines
+
+**Modified Existing Code**
+- `switchTab()` - Now loads data when switching to Expiring Medicines tab
+
+## Current Data Available
+
+- **8 Expired medicines**: Amoxicillin 500mg, Antibiotics XYZ, etc.
+- **3 medicines with batch numbers**: BATCH-2026-001, BATCH-2026-999
+- **40 total medicines**: In the system
+
+## Features
+
+✓ Real-time date calculations
+✓ Color-coded status badges
+✓ Responsive grid layout
+✓ Filter by category
+✓ Detailed medicine information
+✓ Batch number tracking
+✓ Manual refresh button
+✓ Error handling
+
+## Troubleshooting
+
+**No data showing?**
+- Click the "Refresh" button
+- Check browser console (F12) for errors
+- Ensure server is running at localhost:5000
+
+**Numbers not updating?**
+- Click "Refresh" button to reload
+- Check that medicines have expiry_date in database
+
+**Cards not displaying properly?**
+- Check browser zoom level (should be 100%)
+- Try different browser (Chrome, Firefox, Edge)
+- Clear browser cache (Ctrl+Shift+Del)
+
+## Future Ideas
+
+These could be added later:
+- Auto-refresh every 30 seconds
+- Email alerts for expiring medicines
+- Export to CSV/PDF
+- Wastage tracking
+- Historical reports
+
+## Need Help?
+
+Check these files for more details:
+- `FEATURE_COMPLETE_SUMMARY.txt` - Complete overview
+- `EXPIRING_MEDICINES_FEATURE.txt` - Technical details
+- `VERIFICATION_CHECKLIST.txt` - What was verified
+
+## Success Indicators
+
+You'll know it's working when:
+✓ Expiring Medicines tab shows "Already Expired: 8"
+✓ Filter buttons work without errors
+✓ Medicine cards display with batch numbers
+✓ Refresh button updates the data
+✓ No red errors in browser console
+
+---
+
+**Status: ✓ READY TO USE**
+
+The feature is fully implemented and tested. Start using it now!

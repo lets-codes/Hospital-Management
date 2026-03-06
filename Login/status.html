@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status - Login System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .status-box {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+        .status-box.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status-box.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .status-box.loading {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .status-box h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .status-box p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Login System Status</h1>
+            <p>Checking system connectivity...</p>
+        </div>
+
+        <div id="server-status" class="status-box loading">
+            <h3><span class="spinner"></span>Server Status</h3>
+            <p id="server-msg">Checking...</p>
+        </div>
+
+        <div id="db-status" class="status-box loading">
+            <h3><span class="spinner"></span>Database Status</h3>
+            <p id="db-msg">Checking...</p>
+        </div>
+
+        <div id="overall-status" class="status-box loading">
+            <h3 id="overall-title"><span class="spinner"></span>Overall Status</h3>
+            <p id="overall-msg">Checking...</p>
+        </div>
+
+        <div class="buttons">
+            <a href="signup.html" class="btn btn-success" id="signup-btn" style="display:none;">
+                ✓ Go to Sign Up
+            </a>
+            <a href="login.html" class="btn btn-primary" id="login-btn" style="display:none;">
+                → Go to Login
+            </a>
+            <button class="btn btn-primary" onclick="location.reload()" id="retry-btn" style="display:none;">
+                🔄 Retry
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Check server status
+        async function checkStatus() {
+            try {
+                // Test server connection
+                const response = await fetch('http://localhost:5000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: '', password: '' })
+                });
+
+                // Server is responding (even if with error, that's good)
+                document.getElementById('server-status').classList.remove('loading');
+                document.getElementById('server-status').classList.add('success');
+                document.getElementById('server-msg').textContent = '✓ Server is running on port 5000';
+
+                // Check if MySQL is responding
+                if (response.status === 400) {
+                    // Got response from server = database is also OK
+                    document.getElementById('db-status').classList.remove('loading');
+                    document.getElementById('db-status').classList.add('success');
+                    document.getElementById('db-msg').textContent = '✓ Connected to MySQL database "deepanshu"';
+
+                    // All good!
+                    document.getElementById('overall-status').classList.remove('loading');
+                    document.getElementById('overall-status').classList.add('success');
+                    document.getElementById('overall-title').innerHTML = '✓ All Systems Ready!';
+                    document.getElementById('overall-msg').textContent = 'Your login system is ready to use!';
+
+                    // Show action buttons
+                    document.getElementById('signup-btn').style.display = 'inline-block';
+                    document.getElementById('login-btn').style.display = 'inline-block';
+                } else {
+                    // Database issue
+                    document.getElementById('db-status').classList.remove('loading');
+                    document.getElementById('db-status').classList.add('error');
+                    document.getElementById('db-msg').textContent = '✗ Database connection issue. Make sure MySQL is running.';
+
+                    document.getElementById('overall-status').classList.remove('loading');
+                    document.getElementById('overall-status').classList.add('error');
+                    document.getElementById('overall-title').innerHTML = '✗ Database Error';
+                    document.getElementById('overall-msg').textContent = 'Please check MySQL server and database setup.';
+                    document.getElementById('retry-btn').style.display = 'inline-block';
+                }
+            } catch (error) {
+                // Server not responding
+                document.getElementById('server-status').classList.remove('loading');
+                document.getElementById('server-status').classList.add('error');
+                document.getElementById('server-msg').textContent = '✗ Server is not responding. Make sure server_python.py is running.';
+
+                document.getElementById('db-status').classList.remove('loading');
+                document.getElementById('db-status').classList.add('error');
+                document.getElementById('db-msg').textContent = '✗ Could not check (server offline)';
+
+                document.getElementById('overall-status').classList.remove('loading');
+                document.getElementById('overall-status').classList.add('error');
+                document.getElementById('overall-title').innerHTML = '✗ System Not Ready';
+                document.getElementById('overall-msg').innerHTML = `
+                    <strong>Server is not running!</strong><br>
+                    <br>
+                    To start the server:<br>
+                    1. Open Command Prompt<br>
+                    2. Run: cd /d "d:\\Storage Box\\Computer Input\\Visual Studio\\Project\\Shivani Anand\\New folder\\Login"<br>
+                    3. Run: python server_python.py<br>
+                    4. Then refresh this page
+                `;
+                document.getElementById('retry-btn').style.display = 'inline-block';
+            }
+        }
+
+        // Check status when page loads
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html>

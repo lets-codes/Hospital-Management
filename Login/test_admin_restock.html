@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin Restock</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .request-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 6px; background: #f9f9f9; }
+        .error { color: red; padding: 10px; background: #ffe0e0; border-radius: 6px; margin: 10px 0; }
+        .success { color: green; padding: 10px; background: #e0ffe0; border-radius: 6px; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #991b1b; }
+    </style>
+</head>
+<body>
+    <h1>Test Admin Restock Requests</h1>
+    <button onclick="loadAdmin()">Load Admin (ID=107)</button>
+    <button onclick="fetchRequests()">Fetch Restock Requests</button>
+    <button onclick="clearDisplay()">Clear Display</button>
+    
+    <div id="status"></div>
+    <div id="container"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let adminId = null;
+
+        function showStatus(msg, type = 'info') {
+            const el = document.getElementById('status');
+            el.className = type;
+            el.textContent = msg;
+            if (type !== 'error' && type !== 'success') {
+                setTimeout(() => { el.textContent = ''; }, 2000);
+            }
+        }
+
+        async function loadAdmin() {
+            adminId = 107;
+            showStatus('Admin ID set to 107', 'success');
+        }
+
+        async function fetchRequests() {
+            if (!adminId) {
+                showStatus('Please load admin first', 'error');
+                return;
+            }
+
+            showStatus('Fetching restock requests...', 'info');
+            try {
+                const url = `${API_BASE}/api/admin/restock-requests?actor_id=${adminId}`;
+                console.log('Fetching from:', url);
+                const response = await fetch(url);
+                const data = await response.json();
+
+                console.log('Response:', response.status, data);
+                
+                if (!response.ok) {
+                    showStatus(`Error: ${data.message || 'Failed to fetch'}`, 'error');
+                    return;
+                }
+
+                const requests = data.requests || [];
+                showStatus(`Fetched ${requests.length} restock requests`, 'success');
+                displayRequests(requests);
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function displayRequests(requests) {
+            const container = document.getElementById('container');
+            if (!requests || requests.length === 0) {
+                container.innerHTML = '<div class="error">No requests found</div>';
+                return;
+            }
+
+            container.innerHTML = requests.map(req => `
+                <div class="request-card">
+                    <h3>${req.medicine_name}</h3>
+                    <p><strong>Status:</strong> ${req.status}</p>
+                    <p><strong>Requested by:</strong> ${req.pharmacist_name || 'Unknown'}</p>
+                    <p><strong>Quantity:</strong> ${req.requested_quantity} units</p>
+                    <p><strong>Reason:</strong> ${req.reason || 'N/A'}</p>
+                    <p><strong>Requested at:</strong> ${new Date(req.requested_at).toLocaleString()}</p>
+                </div>
+            `).join('');
+        }
+
+        function clearDisplay() {
+            document.getElementById('container').innerHTML = '';
+            document.getElementById('status').innerHTML = '';
+        }
+
+        // Auto-load on page load
+        window.onload = () => {
+            loadAdmin();
+            fetchRequests();
+        };
+    </script>
+</body>
+</html>

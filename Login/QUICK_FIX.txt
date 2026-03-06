@@ -1,0 +1,35 @@
+⚡ QUICK START (Do this right now)
+
+1️⃣  Open PowerShell as Administrator
+    - Press Win+X
+    - Select "Windows PowerShell (Admin)" or "Terminal (Admin)"
+
+2️⃣  Start MySQL
+    net start MySQL80
+    
+    (Wait until you see "service started successfully")
+
+3️⃣  Stop the admin PowerShell
+
+4️⃣  Open normal PowerShell/Command Prompt
+
+5️⃣  Run the server
+    cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\Hospital Management\Login"
+    python START_SERVER.py
+
+6️⃣  Open browser
+    http://localhost:5000
+
+✅ DONE! Your application is now running.
+
+═══════════════════════════════════════════════════════════
+
+❓ What was the problem?
+- Your MySQL password was blank (empty)
+- Server was configured with password 'root'
+- Fixed by updating server_patient_doctor.py
+
+❓ Still not working?
+Run diagnostic: python FIX_CONNECTION_ERROR.py
+
+This will check everything and fix it automatically.

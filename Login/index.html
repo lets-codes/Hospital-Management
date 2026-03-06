@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hospital and community Pharmacy management - Redirecting...</title>
+    <meta http-equiv="refresh" content="0; url=hospital_landing.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+            color: white;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        a {
+            color: white;
+            text-decoration: underline;
+            font-size: 1.1rem;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Hospital and community Pharmacy management</h1>
+        <div class="spinner"></div>
+        <p>Loading the website...</p>
+        <p>If you are not redirected automatically, <a href="hospital_landing.html">click here</a></p>
+    </div>
+</body>
+
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .emergency-banner {
+            background: var(--danger);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+
+        .emergency-banner strong {
+            font-size: 18px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-cta {
+            padding: 15px 40px;
+            background: white;
+            color: var(--primary);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Section */
+        section {
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 50px;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        /* About Section */
+        .about {
+            background: var(--light);
+        }
+
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .about-text h3 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .about-text p {
+            margin-bottom: 15px;
+            line-height: 1.8;
+            color: var(--text);
+        }
+
+        .about-features {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .about-features li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .about-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .about-image {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .about-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Services Section */
+        .services {
+            background: white;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .service-card {
+            background: var(--light);
+            padding: 40px 30px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+            background: white;
+        }
+
+        .service-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .service-card h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+
+        .service-card p {
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* Departments Section */
+        .departments {
+            background: var(--light);
+        }
+
+        .dept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .dept-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .dept-card:hover {
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .dept-card .icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+
+        .dept-card h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        /* Doctors Section */
+        .doctors {
+            background: white;
+        }
+
+        .doctors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .doctor-card {
+            background: var(--light);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .doctor-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .doctor-avatar {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+        }
+
+        .doctor-info {
+            padding: 20px;
+        }
+
+        .doctor-info h3 {
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .doctor-spec {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .doctor-contact {
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 15px;
+        }
+
+        .btn-appointment {
+            padding: 8px 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-appointment:hover {
+            background: var(--secondary);
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            background: var(--light);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .testimonial-stars {
+            color: #ffc107;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-text {
+            color: var(--text);
+            margin-bottom: 20px;
+            font-style: italic;
+            line-height: 1.8;
+        }
+
+        .testimonial-author {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 14px;
+        }
+
+        .testimonial-role {
+            color: var(--primary);
+            font-size: 12px;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h2 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .stat-item p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* Contact Section */
+        .contact {
+            background: white;
+        }
+
+        .contact-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: start;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .contact-item {
+            display: flex;
+            gap: 20px;
+        }
+
+        .contact-icon {
+            font-size: 32px;
+            color: var(--primary);
+            min-width: 40px;
+        }
+
+        .contact-item h4 {
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .contact-item p {
+            color: var(--text);
+        }
+
+        .contact-form {
+            background: var(--light);
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 50px 20px 20px;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-section a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-section a:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #444;
+            padding-top: 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                🏥 HealthCare Plus
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#doctors">Doctors</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <div class="nav-btns">
+                <a href="login.html" class="btn btn-secondary">Login</a>
+                <a href="signup.html" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="emergency-banner">
+                <strong>🚑 Emergency? Call: +91-1234-567-890</strong>
+            </div>
+            <h1>Your Health, Our Priority</h1>
+            <p>Welcome to HealthCare Plus - India's Leading Hospital Management System</p>
+            <div class="hero-buttons">
+                <button class="btn-cta" onclick="window.location.href='signup.html'">Book Appointment</button>
+                <button class="btn-cta" onclick="alert('Calling emergency services...')">Emergency Services</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about" id="about">
+        <div class="container">
+            <div class="about-content">
+                <div>
+                    <h3>About HealthCare Plus</h3>
+                    <p>HealthCare Plus is a comprehensive hospital management platform dedicated to providing world-class healthcare services with state-of-the-art facilities and highly experienced medical professionals.</p>
+                    <p>Our mission is to make quality healthcare accessible to everyone through innovative technology and compassionate care.</p>
+                    <ul class="about-features">
+                        <li>50+ Specialist Doctors</li>
+                        <li>24/7 Emergency Services</li>
+                        <li>Advanced Diagnostic Equipment</li>
+                        <li>Patient-Centric Care Approach</li>
+                        <li>100+ Years of Excellence</li>
+                        <li>ISO Certified Facilities</li>
+                    </ul>
+                </div>
+                <div class="about-image">
+                    🏥
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="container">
+            <h2 class="section-title">Our Services</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">🩺</div>
+                    <h3>General Consultation</h3>
+                    <p>Expert medical consultation and diagnosis for routine and complex health conditions</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🔬</div>
+                    <h3>Diagnostic Services</h3>
+                    <p>Advanced lab tests, X-rays, CT scans, MRI and ultrasound facilities</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🚑</div>
+                    <h3>Emergency Care</h3>
+                    <p>24/7 emergency services with rapid response teams and ICU facilities</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💉</div>
+                    <h3>Surgical Services</h3>
+                    <p>State-of-the-art operation theaters with expert surgical teams</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🛏️</div>
+                    <h3>Inpatient Care</h3>
+                    <p>Comfortable wards with modern facilities and round-the-clock nursing care</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">💊</div>
+                    <h3>Pharmacy Services</h3>
+                    <p>Complete pharmacy with essential and specialized medicines</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Departments Section -->
+    <section id="dept">
+        <div class="container">
+            <h2 class="section-title">Our Departments</h2>
+            <div class="dept-grid">
+                <div class="dept-card">
+                    <div class="icon">❤️</div>
+                    <h4>Cardiology</h4>
+                    <p>Heart & Cardiovascular</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">🧠</div>
+                    <h4>Neurology</h4>
+                    <p>Brain & Nervous System</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">🦴</div>
+                    <h4>Orthopedics</h4>
+                    <p>Bones & Joints</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">👶</div>
+                    <h4>Pediatrics</h4>
+                    <p>Child Health Care</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">👩‍⚕️</div>
+                    <h4>Gynecology</h4>
+                    <p>Women's Health</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">🦷</div>
+                    <h4>Dental</h4>
+                    <p>Oral & Dental Care</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">👁️</div>
+                    <h4>Ophthalmology</h4>
+                    <p>Eye Care Services</p>
+                </div>
+                <div class="dept-card">
+                    <div class="icon">🫀</div>
+                    <h4>General Surgery</h4>
+                    <p>Surgical Procedures</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h2>50+</h2>
+                    <p>Specialist Doctors</p>
+                </div>
+                <div class="stat-item">
+                    <h2>100K+</h2>
+                    <p>Happy Patients</p>
+                </div>
+                <div class="stat-item">
+                    <h2>200+</h2>
+                    <p>Beds Available</p>
+                </div>
+                <div class="stat-item">
+                    <h2>24/7</h2>
+                    <p>Emergency Services</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Doctors Section -->
+    <section class="doctors" id="doctors">
+        <div class="container">
+            <h2 class="section-title">Our Doctors</h2>
+            <div class="doctors-grid">
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👨‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Rajesh Kumar</h3>
+                        <div class="doctor-spec">Cardiologist</div>
+                        <div class="doctor-contact">📞 +91-9876-543-210</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Rajesh Kumar')">Book Now</button>
+                    </div>
+                </div>
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👩‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Priya Singh</h3>
+                        <div class="doctor-spec">Neurologist</div>
+                        <div class="doctor-contact">📞 +91-9876-543-211</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Priya Singh')">Book Now</button>
+                    </div>
+                </div>
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👨‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Amit Patel</h3>
+                        <div class="doctor-spec">Orthopedic Surgeon</div>
+                        <div class="doctor-contact">📞 +91-9876-543-212</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Amit Patel')">Book Now</button>
+                    </div>
+                </div>
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👩‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Neha Gupta</h3>
+                        <div class="doctor-spec">Pediatrician</div>
+                        <div class="doctor-contact">📞 +91-9876-543-213</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Neha Gupta')">Book Now</button>
+                    </div>
+                </div>
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👨‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Vikram Desai</h3>
+                        <div class="doctor-spec">General Surgeon</div>
+                        <div class="doctor-contact">📞 +91-9876-543-214</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Vikram Desai')">Book Now</button>
+                    </div>
+                </div>
+                <div class="doctor-card">
+                    <div class="doctor-avatar">👩‍⚕️</div>
+                    <div class="doctor-info">
+                        <h3>Dr. Meera Sharma</h3>
+                        <div class="doctor-spec">Gynecologist</div>
+                        <div class="doctor-contact">📞 +91-9876-543-215</div>
+                        <button class="btn-appointment" onclick="bookAppointment('Dr. Meera Sharma')">Book Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <div class="container">
+            <h2 class="section-title">Patient Testimonials</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <div class="testimonial-text">"Excellent service and care. The doctors are highly professional and the staff is very friendly. Highly recommended!"</div>
+                    <div class="testimonial-author">Ramesh Kumar</div>
+                    <div class="testimonial-role">Patient - Heart Surgery</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <div class="testimonial-text">"Amazing experience! The hospital management system made booking appointments so easy. Recovered well!"</div>
+                    <div class="testimonial-author">Sneha Menon</div>
+                    <div class="testimonial-role">Patient - Orthopedic</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <div class="testimonial-text">"Top-notch medical care with modern facilities. The staff was caring and attentive throughout my stay."</div>
+                    <div class="testimonial-author">Arjun Verma</div>
+                    <div class="testimonial-role">Patient - Emergency Care</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2 class="section-title">Contact Us</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <div class="contact-icon">📍</div>
+                        <div>
+                            <h4>Hospital Address</h4>
+                            <p>123 Health Street, Medical Complex<br>New Delhi - 110001, India</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">📞</div>
+                        <div>
+                            <h4>Contact Numbers</h4>
+                            <p>Emergency: +91-1234-567-890<br>General: +91-1234-567-891</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">✉️</div>
+                        <div>
+                            <h4>Email Address</h4>
+                            <p>info@healthcareplus.com<br>support@healthcareplus.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">⏰</div>
+                        <div>
+                            <h4>Working Hours</h4>
+                            <p>OPD: 8:00 AM - 8:00 PM<br>Emergency: 24/7 Open</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <h3 style="margin-bottom: 20px; color: var(--dark);">Send us a Message</h3>
+                    <form onsubmit="submitContact(event)">
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject *</label>
+                            <input type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message *</label>
+                            <textarea required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>🏥 HealthCare Plus</h3>
+                <p>Your trusted healthcare partner providing quality medical services 24/7.</p>
+                <div class="social-links">
+                    <a href="#" title="Facebook">f</a>
+                    <a href="#" title="Twitter">𝕏</a>
+                    <a href="#" title="Instagram">📷</a>
+                    <a href="#" title="LinkedIn">in</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About Us</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#doctors">Our Doctors</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Services</h3>
+                <ul>
+                    <li><a href="#">General Consultation</a></li>
+                    <li><a href="#">Diagnostic Services</a></li>
+                    <li><a href="#">Emergency Care</a></li>
+                    <li><a href="#">Surgical Services</a></li>
+                    <li><a href="#">Inpatient Care</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Important Links</h3>
+                <ul>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms & Conditions</a></li>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Careers</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024-2025 HealthCare Plus Hospital. All Rights Reserved. | Designed for Healthcare Excellence</p>
+        </div>
+    </footer>
+
+    <script>
+        function bookAppointment(doctorName) {
+            if (!localStorage.getItem('isLoggedIn')) {
+                alert('Please login first to book an appointment');
+                window.location.href = 'login.html';
+            } else {
+                window.location.href = 'hospital.html';
+            }
+        }
+
+        function submitContact(event) {
+            event.preventDefault();
+            alert('Thank you for your message. We will get back to you soon!');
+            event.target.reset();
+        }
+    </script>
+</body>
+</html>

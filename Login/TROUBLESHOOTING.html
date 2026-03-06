@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URGENT: Node.js Installation Required</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc3545 0%, #a71232 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #a71232 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 { 
+            font-size: 32px; 
+            margin-bottom: 10px;
+        }
+        .header p { 
+            opacity: 0.95; 
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 30px;
+            border-radius: 4px;
+        }
+        .alert h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .alert p {
+            color: #856404;
+            margin: 5px 0;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #dc3545;
+            font-size: 24px;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #dc3545;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .step h3 {
+            color: #dc3545;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+            color: #155724;
+            margin: 15px 0;
+        }
+        .error {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+            margin: 15px 0;
+        }
+        .download-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 0;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .download-btn:hover {
+            background: #a71232;
+        }
+        .checklist {
+            list-style: none;
+        }
+        .checklist li {
+            padding: 10px;
+            margin: 10px 0;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+        .checklist li.done {
+            background: #d4edda;
+        }
+        .checklist li.pending {
+            background: #f8d7da;
+        }
+        .checklist li:before {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            color: #dc3545;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .checklist li.done:before {
+            content: "✓";
+            color: #28a745;
+        }
+        .checklist li.pending:before {
+            content: "✗";
+            color: #dc3545;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            color: #dc3545;
+            font-weight: 600;
+        }
+        tr:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ SETUP REQUIRED</h1>
+            <p>Your system is missing Node.js - the server cannot run</p>
+        </div>
+
+        <div class="alert">
+            <h3>🔴 Current Status:</h3>
+            <p><strong>❌ Node.js:</strong> NOT INSTALLED</p>
+            <p><strong>❌ npm:</strong> NOT AVAILABLE</p>
+            <p><strong>❌ Dependencies:</strong> NOT INSTALLED</p>
+            <p><strong>Result:</strong> Login system cannot function</p>
+        </div>
+
+        <div class="content">
+            <!-- Step 1: Install Node.js -->
+            <div class="section">
+                <h2>Step 1️⃣ Install Node.js </h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Download Node.js</h3>
+                    <p>Visit the official Node.js website and download the LTS version:</p>
+                    <a href="https://nodejs.org/" target="_blank" class="download-btn">
+                        📥 Download Node.js LTS (Recommended)
+                    </a>
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                        <strong>Choose LTS version</strong> (Long Term Support) for stability
+                    </p>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Install Node.js</h3>
+                    <p>Run the installer you downloaded:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Double-click the downloaded .msi file</li>
+                        <li>Follow the installation wizard</li>
+                        <li>Keep all default settings</li>
+                        <li>Click "Install"</li>
+                        <li>Restart your computer (IMPORTANT!)</li>
+                    </ul>
+                    <div class="error" style="margin-top: 15px;">
+                        ⚠️ <strong>Don't forget to restart!</strong> The PATH won't update until you restart.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">3</span>Verify Installation</h3>
+                    <p>After restart, open Command Prompt and check:</p>
+                    <div class="code-block">node --version
+npm --version</div>
+                    <p style="margin-top: 10px;">You should see version numbers like:</p>
+                    <div class="code-block">v18.13.0
+9.2.0</div>
+                    <div class="success" style="margin-top: 15px;">
+                        ✓ If you see version numbers, Node.js is installed correctly
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Install Dependencies -->
+            <div class="section">
+                <h2>Step 2️⃣ Install NPM Dependencies</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span>Open Command Prompt</h3>
+                    <p>Press <code style="background: #f0f0f0; padding: 2px 6px;">Windows Key + R</code>, type <code style="background: #f0f0f0; padding: 2px 6px;">cmd</code>, press Enter</p>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span>Navigate to Login folder</h3>
+                    <div class="code-block">cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"</div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">3</span>Install packages</h3>
+                    <div class="code-block">npm install

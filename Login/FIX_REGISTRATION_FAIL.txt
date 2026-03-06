@@ -1,0 +1,153 @@
+🚨 REGISTRATION FAILING - DIAGNOSIS REPORT 🚨
+===================================================
+
+ISSUE FOUND:
+❌ Node.js is NOT installed on your system
+❌ npm is NOT available
+❌ Dependencies (express, mysql, bcryptjs) are NOT installed
+❌ Server cannot run without these
+
+=====================================================
+
+SOLUTION - Follow These 4 Steps:
+=====================================================
+
+STEP 1: INSTALL NODE.JS
+-----------------------
+1. Visit: https://nodejs.org/
+2. Download "LTS" version (green button)
+3. Run the installer (.msi file)
+4. Follow the wizard, click Install
+5. ✓ RESTART YOUR COMPUTER (IMPORTANT!)
+
+Verify installation:
+- Open Command Prompt
+- Type: node --version
+- Type: npm --version
+- You should see version numbers
+
+=====================================================
+
+STEP 2: OPEN COMMAND PROMPT
+---------------------------
+Press: Windows Key + R
+Type: cmd
+Press: Enter
+
+=====================================================
+
+STEP 3: NAVIGATE TO LOGIN FOLDER
+---------------------------------
+Copy and paste this command:
+cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\New folder\Login"
+
+Press Enter
+
+=====================================================
+
+STEP 4: INSTALL DEPENDENCIES
+-----------------------------
+Type this command:
+npm install
+
+Wait for it to complete (may take 1-2 minutes)
+You should see "added XX packages"
+
+=====================================================
+
+STEP 5: CREATE DATABASE IN MYSQL
+---------------------------------
+1. Open MySQL Command Line or MySQL Workbench
+2. Paste this:
+
+CREATE DATABASE IF NOT EXISTS deepanshu;
+USE deepanshu;
+
+CREATE TABLE IF NOT EXISTS login (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+);
+
+3. Press Enter
+4. You should see "Query OK"
+
+=====================================================
+
+STEP 6: START THE SERVER
+------------------------
+In Command Prompt (in Login folder), type:
+npm start
+
+You should see:
+- "Connected to SQL Database"
+- "Server running on port 3000"
+
+=====================================================
+
+STEP 7: TEST THE LOGIN SYSTEM
+------------------------------
+Open your browser and go to:
+1. Sign Up: http://localhost:3000/signup.html
+2. Create account (data will save to deepanshu.login table)
+3. Login page: http://localhost:3000/login.html
+4. Login with credentials you just created
+5. Home page: http://localhost:3000/home.html
+
+=====================================================
+
+TROUBLESHOOTING:
+=====================================================
+
+Problem: "npm is still not recognized"
+Solution: 
+- Restart Command Prompt completely
+- Or restart computer again
+- Make sure you installed Node.js correctly
+
+Problem: "npm install gives errors about bcryptjs"
+Solution:
+- Delete node_modules folder
+- Delete package-lock.json
+- Run: npm install
+- Wait for completion
+
+Problem: "Error registering user" after npm install
+Solution:
+- Ensure MySQL server is running
+- Check database 'deepanshu' and table 'login' exist
+- Verify server.js has correct MySQL credentials
+
+Problem: "Cannot GET /signup.html"
+Solution:
+- Make sure server is running (Step 6)
+- Use correct URL: http://localhost:3000/signup.html
+- Not: file:///...
+
+=====================================================
+
+QUICK CHECKLIST:
+=====================================================
+☐ Node.js LTS downloaded and installed
+☐ Computer restarted after Node.js installation
+☐ npm --version works in Command Prompt
+☐ Navigated to Login folder
+☐ npm install completed successfully
+☐ node_modules folder exists
+☐ MySQL server is running
+☐ deepanshu database created
+☐ login table created in deepanshu
+☐ npm start shows "Connected to SQL Database"
+☐ Can access http://localhost:3000/signup.html
+
+=====================================================
+
+All checks passed? Try signing up now!
+If still issues, check exact error message in Command Prompt
+where server is running.
+
+=====================================================

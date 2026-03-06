@@ -1,0 +1,358 @@
+================================================================================
+PHARMACIST & ADMIN PORTAL - QUICK REFERENCE GUIDE
+================================================================================
+
+🚀 QUICK START (5 MINUTES)
+
+1. START THE SERVER:
+   cd "d:\Storage Box\Computer Input\Visual Studio\Project\Shivani Anand\Hospital Management\Login"
+   python server_patient_doctor.py
+
+2. OPEN PHARMACIST PORTAL:
+   http://localhost:5000/pharmacist_portal.html
+   
+3. OPEN ADMIN PORTAL (in another tab):
+   http://localhost:5000/admin_portal.html
+
+4. LOGIN with your user ID (enter ID when prompted)
+
+================================================================================
+🏥 PHARMACIST PORTAL - STEP BY STEP
+================================================================================
+
+LOCATION: http://localhost:5000/pharmacist_portal.html
+
+MAIN FEATURES:
+
+📊 Dashboard Stats (Top):
+   - Total Medicines: Count of all medicines
+   - Low Stock Items: Count of medicines with ≤10 units (RED FLAG)
+   - Pending Requests: Your requests waiting for admin approval
+
+🔍 Search & Controls:
+   - Search Box: Type medicine name to filter list
+   - Add Medicine: Create new medicine entry
+   - Refresh: Update inventory and request status
+
+💊 Medicine Inventory Cards:
+   Each card shows:
+   - Medicine Name
+   - Status Badge: [Low Stock] or [OK]
+   - Details: SKU, Manufacturer, Unit Price, Expiry Date
+   - Current Quantity: Number of units in stock
+   - Pending Requests: Count of active restock requests
+   - Buttons: "Request Restock" and "Delete"
+
+📋 My Restock Requests Section (Bottom):
+   Shows all your submitted requests:
+   - Medicine Name | [Status Badge] (PENDING/APPROVED/REJECTED)
+   - Details: Requested quantity, reason, submission date
+   - For APPROVED: ✓ Green badge with approval date
+   - For REJECTED: ✗ Red badge with admin's reason
+
+⚡ WORKFLOW - REQUEST RESTOCK:
+
+STEP 1: Find Low-Stock Medicine
+   - Look for RED "Low Stock" badges
+   - Or use search to find medicine by name
+
+STEP 2: Click "Request Restock" Button
+   - Modal popup appears
+
+STEP 3: Enter Details in Modal
+   - Medicine Name: [Auto-filled, disabled]
+   - Current Quantity: [Auto-filled, disabled]
+   - Request Quantity: [REQUIRED] Enter how many units you need
+   - Reason: [Optional] Explain why (default: "Low stock")
+
+STEP 4: Click "Submit Request"
+   - Success message: "Restock request submitted to admin!"
+   - Request appears in "My Restock Requests" section with PENDING status
+   - Wait for admin to review
+
+STEP 5: Monitor Status
+   - Refresh page anytime to see latest status
+   - If APPROVED: ✓ Green badge + approval date
+   - If REJECTED: ✗ Red badge + admin's rejection reason
+
+⚠️ TIPS:
+   - Always enter realistic quantities (don't request 1000 units for safety stock)
+   - Check current stock before requesting (in Quantity display)
+   - Read admin's feedback if request is rejected
+   - Low stock threshold is 10 units (RED if ≤10)
+
+================================================================================
+🏥 ADMIN PORTAL - STEP BY STEP
+================================================================================
+
+LOCATION: http://localhost:5000/admin_portal.html
+
+MAIN FEATURES:
+
+📊 Dashboard Stats (Top):
+   - Pending Requests: Action required count (YELLOW)
+   - Approved Today: Approved in last 24 hours (GREEN)
+   - Rejected Today: Rejected in last 24 hours (RED)
+
+🎯 Tab Navigation:
+   - Restock Requests: [ACTIVE] Manage pharmacist requests
+   - All Medicines: View complete medicine inventory
+
+🔥 Restock Requests Tab Features:
+
+Filter Buttons:
+   - [Pending Only]: Show only waiting requests
+   - [Approved]: Show approved requests
+   - [Refresh]: Update request list
+
+Request Cards Display:
+   Each card shows:
+   - Medicine Name with Status Badge
+   - Pharmacist Name: Who requested it
+   - Requested Quantity: How many units needed
+   - Reason: Why they need it
+   - Status: PENDING (⏳ yellow)
+
+⚡ WORKFLOW - APPROVE REQUEST:
+
+STEP 1: View Pending Requests
+   - Click "Pending Only" filter (or requests auto-show pending)
+   - See all pending restock requests
+
+STEP 2: Select Request to Approve
+   - Read medicine name, quantity, and reason
+   - Review pharmacist notes
+
+STEP 3: Click "Approve & Add to Stock" Button
+   - Approval modal appears
+
+STEP 4: Enter Approval Details (Optional)
+   - Admin Notes: [Optional] Add notes about approval
+   - Example: "Approved - allocated from supplier stock"
+
+STEP 5: Click Confirm
+   - Success message: "Request approved! Inventory updated."
+   - System AUTOMATICALLY:
+     * Adds requested quantity to medicine stock
+     * Changes request status to APPROVED
+     * Records approval timestamp and your admin ID
+   
+STEP 6: Verify Update
+   - Click "All Medicines" tab to see updated inventory
+   - Medicine quantity should be increased by requested amount
+
+⚡ WORKFLOW - REJECT REQUEST:
+
+STEP 1: View Pending Request
+   - See request details on card
+
+STEP 2: Click "Reject" Button
+   - Rejection modal appears
+
+STEP 3: Provide Rejection Reason (REQUIRED)
+   - Enter why you're rejecting
+   - Examples:
+     * "Supplier out of stock"
+     * "Budget limit reached"
+     * "Medicine being discontinued"
+     * "Order already placed"
+
+STEP 4: Click Confirm
+   - Success message: "Request rejected"
+   - System:
+     * Updates status to REJECTED
+     * Stores your rejection reason
+     * Records rejection timestamp
+   
+STEP 5: Pharmacist Notified
+   - When pharmacist refreshes, they see:
+     * Status changed to REJECTED
+     * Your reason/feedback displayed
+     * Can submit new request if issue resolved
+
+🔍 All Medicines Tab Features:
+
+Search & Table:
+   - Search box: Find medicine by name
+   - Columns: Name, Manufacturer, Stock, Price, Expiry
+   - Red highlights: Low stock items (≤10 units)
+   - Use this to verify inventory levels before approving/rejecting
+
+⚠️ TIPS:
+   - ALWAYS provide rejection reasons (pharmacist needs feedback)
+   - Check "All Medicines" tab to verify stock levels
+   - Approve realistic requests to keep pharmacy operational
+   - Monitor "Pending Requests" count regularly
+   - Use filter buttons to stay organized
+
+================================================================================
+🔗 COMMUNICATION FLOW (VISUAL)
+================================================================================
+
+PHARMACIST SIDE:
+┌─────────────────────────────────────────┐
+│   Pharmacist Portal                     │
+│  ┌─────────────────────────────────┐   │
+│  │ LOW STOCK ITEM DETECTED          │   │
+│  │ Paracetamol: 5 Units ❌          │   │
+│  │                                  │   │
+│  │ [Click: Request Restock]         │   │
+│  └─────────────────────────────────┘   │
+│                  ▼                       │
+│  ┌─────────────────────────────────┐   │
+│  │ Quantity: 100 ✓ Submit Request  │   │
+│  └─────────────────────────────────┘   │
+│                  ▼                       │
+│  ┌─────────────────────────────────┐   │
+│  │ Request Status: ⏳ PENDING       │   │
+│  │ "Waiting for admin approval"    │   │
+│  └─────────────────────────────────┘   │
+│                  ▼                       │
+│  ┌─────────────────────────────────┐   │
+│  │ [Admin Approves]                 │   │
+│  │ Status: ✓ APPROVED               │   │
+│  │ New Stock: 105 Units ✓           │   │
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+
+ADMIN SIDE:
+┌─────────────────────────────────────────┐
+│   Admin Portal                          │
+│  ┌─────────────────────────────────┐   │
+│  │ NEW REQUEST APPEARED             │   │
+│  │ ⏳ Pending Requests: 1            │   │
+│  │                                  │   │
+│  │ Paracetamol 500mg                │   │
+│  │ By: Pharmacist X | Qty: 100      │   │
+│  │ Reason: "Critical shortage"      │   │
+│  │                                  │   │
+│  │ [Approve] [Reject]              │   │
+│  └─────────────────────────────────┘   │
+│                  ▼                       │
+│  ┌─────────────────────────────────┐   │
+│  │ [Click: Approve & Add to Stock]  │   │
+│  │  Notes: "Approved"               │   │
+│  │  [Confirm]                       │   │
+│  └─────────────────────────────────┘   │
+│                  ▼                       │
+│  ┌─────────────────────────────────┐   │
+│  │ APPROVED ✓                       │   │
+│  │ Stock Updated: 5 + 100 = 105    │   │
+│  │ Pharmacist Notified              │   │
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+
+================================================================================
+🔐 LOGIN & ROLE-BASED ACCESS
+================================================================================
+
+BEFORE USING PORTALS:
+1. Ensure you have User Account (Signup if needed)
+2. Account must have correct role:
+   - Role: "pharmacist" for Pharmacist Portal
+   - Role: "admin" for Admin Portal
+
+LOGIN PROCESS:
+1. Go to: http://localhost:5000/login.html
+2. Enter your User ID or Email
+3. Enter Password
+4. Click Login
+5. System AUTO-REDIRECTS to correct portal based on role:
+   - Pharmacist Role → Pharmacist Portal
+   - Admin Role → Admin Portal
+
+IF WRONG PORTAL OPENS:
+- Check your user role in database
+- Create new account with correct role
+- Contact system administrator
+
+================================================================================
+📊 VIEWING REQUEST HISTORY
+================================================================================
+
+PHARMACIST:
+MyRestock Requests Section shows:
+- All requests you submitted
+- Current status (PENDING/APPROVED/REJECTED)
+- Request details and dates
+- Admin feedback/rejection reasons
+- Auto-updating when you click Refresh
+
+ADMIN:
+Restock Requests Tab shows:
+- All requests from all pharmacists
+- Filter by: Pending, Approved, Rejected, All
+- Request details and pharmacist info
+- Action buttons for approval/rejection
+
+================================================================================
+🚨 COMMON ISSUES & SOLUTIONS
+================================================================================
+
+ISSUE: Can't see my request in My Restock Requests
+→ SOLUTION: Click Refresh button or wait for auto-refresh
+
+ISSUE: Request quantity shows but medicine name is blank
+→ SOLUTION: Close modal and try again, may be loading delay
+
+ISSUE: Approved request but stock didn't update
+→ SOLUTION: Click Refresh to see updated inventory
+
+ISSUE: Can't reject request without reason
+→ SOLUTION: Rejection reason is REQUIRED field - provide one
+
+ISSUE: Don't see any pending requests (Admin)
+→ SOLUTION: All requests might be approved/rejected, check filters
+
+ISSUE: Medicines list is very long
+→ SOLUTION: Use Search box to find specific medicine
+
+ISSUE: Portal says "Permission Denied"
+→ SOLUTION: Check your role, pharmacist can't access admin features
+
+ISSUE: Get 403 Forbidden error
+→ SOLUTION: You don't have permission for that action
+   - Pharmacist: Can only request restock
+   - Admin: Can only approve/reject requests
+
+================================================================================
+📞 SUPPORT CHECKLIST
+================================================================================
+
+Before reporting issue:
+☐ Server is running (see "QUICK START")
+☐ Using correct portal URL (pharmacist vs admin)
+☐ Logged in with correct user role
+☐ Clicked Refresh button
+☐ Browser developer console shows no JS errors
+☐ Database connection is working
+
+Testing System:
+Run: python test_comprehensive_diagnostics.py
+This tests all portals and workflows end-to-end
+
+================================================================================
+🎓 LEARNING PATH
+================================================================================
+
+NEW USER - START HERE:
+1. Understand the workflow (read COMMUNICATION FLOW above)
+2. Create test accounts (pharmacist + admin)
+3. Start pharmacist portal, add some medicines
+4. Submit a restock request as pharmacist
+5. Switch to admin portal, approve the request
+6. Switch back to pharmacist, see approval
+
+NEXT STEPS:
+- Explore rejection workflow
+- Try different request quantities
+- View request history
+- Test permission restrictions (try accessing wrong portal)
+
+ADVANCED:
+- Review database to understand data storage
+- Check server logs for request processing
+- Analyze API responses with browser dev tools
+- Plan customizations based on hospital needs
+
+================================================================================

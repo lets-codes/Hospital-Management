@@ -1,0 +1,482 @@
+================================================================================
+PHARMACIST ↔ ADMIN PORTAL - BIDIRECTIONAL COMMUNICATION LINK
+================================================================================
+
+✅ COMPLETE INTEGRATION VERIFIED
+
+================================================================================
+PART 1: END-TO-END COMMUNICATION FLOW
+================================================================================
+
+REQUEST CREATION (Pharmacist → Admin):
+─────────────────────────────────────
+
+1. Pharmacist identifies low-stock medicine
+   Location: Pharmacist Portal, Medicines Grid
+   Trigger: RED "Low Stock" badge on medicine ≤10 units
+   
+2. Pharmacist clicks "Request Restock" button
+   Action: Opens modal with medicine details
+   Data Sent: medicine_id, medicine_name, current_quantity
+   
+3. Pharmacist fills in request details:
+   - Request Quantity: How many units to restock
+   - Reason: Why stock is low
+   Action: Clicks "Submit Request"
+   
+4. System processes request:
+   Endpoint: POST /api/restock-request
+   Body: {
+       actor_id: pharmacist_id,
+       medicine_id: id,
+       medicine_name: "Name",
+       requested_quantity: 100,
+       reason: "Low stock"
+   }
+   
+5. Database records request:
+   Table: restock_requests
+   Status: 'pending'
+   Data: Request ID, medicine, quantity, pharmacist_id, timestamp
+   
+6. Admin Portal immediately sees new request:
+   Endpoint: GET /api/admin/restock-requests?status=pending
+   Display: Request appears in "Restock Requests" section
+   Badge: "⏳ Pending" (yellow)
+   
+
+APPROVAL FLOW (Admin → Pharmacist → Auto-Update):
+──────────────────────────────────────────────────
+
+1. Admin sees pending request in Admin Portal
+   Location: Admin Portal, Restock Requests Tab
+   Shows: Medicine, Pharmacist, Quantity, Reason
+   Action: Reviews request details
+   
+2. Admin clicks "Approve & Add to Stock"
+   Modal: Opens with optional notes field
+   Admin enters: Approval notes (optional)
+   Action: Clicks "Confirm"
+   
+3. System processes approval:
+   Endpoint: PUT /api/admin/restock-request/{id}/approve
+   Body: {
+       actor_id: admin_id,
+       admin_notes: "Approved - stock allocated"
+   }
+   
+4. Backend auto-updates:
+   a) Updates request status:
+      UPDATE restock_requests SET status='approved'
+   
+   b) Updates medicine stock:
+      UPDATE medicines SET quantity = quantity + 100
+   
+   c) Records timestamps:
+      approved_at = NOW()
+      approved_by = admin_id
+   
+5. Response returns updated quantities:
+   {
+       "message": "Restock request approved and inventory updated",
+       "old_quantity": 5,
+       "new_quantity": 105,
+       "added_quantity": 100,
+       "medicine_name": "Paracetamol 500mg"
+   }
+   
+6. Pharmacist sees updates:
+   a) In Inventory:
+      Endpoint: GET /api/pharmacist/inventory
+      Paracetamol: 5 → 105 units (GREEN "OK" badge)
+   
+   b) In Request Status:
+      Endpoint: GET /api/pharmacist/restock-requests
+      Status: PENDING → APPROVED
+      Badge: ✓ Green with approval date
+      
+
+REJECTION FLOW (Admin → Pharmacist + Feedback):
+───────────────────────────────────────────────
+
+1. Admin sees pending request
+   Decision: Request cannot be fulfilled (supplier issue, budget, etc)
+   Action: Clicks "Reject" button
+   
+2. Admin provides rejection reason:
+   Modal: Opens reason text field
+   Input: Enters reason, e.g., "Supplier out of stock - will retry next week"
+   Action: Clicks "Confirm Rejection"
+   
+3. System processes rejection:
+   Endpoint: PUT /api/admin/restock-request/{id}/reject
+   Body: {
+       actor_id: admin_id,
+       rejection_reason: "Supplier out of stock - will retry next week"
+   }
+   
+4. Database records rejection:
+   UPDATE restock_requests SET
+       status='rejected',
+       admin_notes='Supplier out of stock...',
+       approved_at=NOW(),
+       approved_by=admin_id
+   
+5. Response:
+   {
+       "message": "Restock request rejected",
+       "reason": "Supplier out of stock - will retry next week"
+   }
+   
+6. Pharmacist sees rejection with feedback:
+   a) In My Restock Requests:
+      Status: PENDING → REJECTED
+      Badge: ✗ Red "REJECTED" status
+   
+   b) Feedback visible:
+      "Admin Reason: Supplier out of stock - will retry next week"
+      Pharmacist can read admin's explanation
+   
+7. Pharmacist can resubmit:
+   After issue resolved, resubmit request
+   Links back to same medicine
+   Creates new separate request record
+
+================================================================================
+PART 2: API LINKAGE & DATA FLOW
+================================================================================
+
+PHARMACIST ENDPOINTS (Write):
+┌─────────────────────────────────────────────────┐
+│ POST /api/restock-request                       │
+│ - Input: medicine_id, medicine_name, quantity   │
+│ - Output: request_id                            │
+│ - Creates entry in restock_requests table       │
+└─────────────────────────────────────────────────┘
+          ▼
+    [DATABASE]
+    restock_requests table
+    (stores pending request)
+          ▼
+┌─────────────────────────────────────────────────┐
+│ GET /api/admin/restock-requests                 │
+│ - Admin sees new request immediately            │
+│ - Query filters by status                       │
+│ - Returns full request details                  │
+└─────────────────────────────────────────────────┘
+
+ADMIN ENDPOINTS (Write):
+┌─────────────────────────────────────────────────┐
+│ PUT /api/admin/restock-request/{id}/approve     │
+│ - Input: admin_id, admin_notes                  │
+│ - Updates restock_requests.status='approved'    │
+│ - Updates medicines.quantity += requested_qty   │
+│ - Output: old_quantity, new_quantity, added_qty │
+└─────────────────────────────────────────────────┘
+          ▼
+    [DATABASE]
+    - restock_requests (status updated)
+    - medicines (quantity updated)
+          ▼
+┌─────────────────────────────────────────────────┐
+│ GET /api/pharmacist/inventory                   │
+│ - Pharmacist sees updated medicine quantities   │
+│ - Stock reflects admin's approval               │
+│ - Low-stock badges update accordingly           │
+└─────────────────────────────────────────────────┘
+
+REJECTION ALTERNATIVE:
+┌─────────────────────────────────────────────────┐
+│ PUT /api/admin/restock-request/{id}/reject      │
+│ - Input: admin_id, rejection_reason             │
+│ - Updates restock_requests.status='rejected'    │
+│ - Stores rejection_reason in admin_notes        │
+│ - Output: rejection_reason                      │
+└─────────────────────────────────────────────────┘
+          ▼
+    [DATABASE]
+    restock_requests (status & notes updated)
+          ▼
+┌─────────────────────────────────────────────────┐
+│ GET /api/pharmacist/restock-requests            │
+│ - Pharmacist sees rejection status              │
+│ - Reads admin's rejection reason                │
+│ - Can resubmit if issue resolved                │
+└─────────────────────────────────────────────────┘
+
+================================================================================
+PART 3: REAL-TIME SYNCHRONIZATION
+================================================================================
+
+HOW UPDATES APPEAR IN REAL-TIME:
+
+SCENARIO 1: Pharmacist leaves browser open
+─────────────────────────────────────────
+1. Admin approves request
+2. Pharmacist's request status NOT auto-updated
+3. Solution: Pharmacist must click "Refresh" to see latest status
+4. Enhancement: Could add WebSocket for true real-time updates
+
+SCENARIO 2: Pharmacist closes and reopens portal
+──────────────────────────────────────────────
+1. Admin approves/rejects request
+2. Pharmacist reopens portal
+3. New request status automatically loaded from database
+4. Inventory automatically refreshed
+5. Portals show current state
+
+SCENARIO 3: Multiple admins managing requests
+──────────────────────────────────────────
+1. Multiple admins can view same pending requests
+2. First admin to approve/reject changes status
+3. Other admins see updated status on next refresh
+4. Database enforces single status per request
+
+SYNCHRONIZATION POINTS:
+
+Pharmacist Portal Auto-Sync:
+✓ On page load: Loads inventory and requests from DB
+✓ After "Submit Request": Refreshes request list
+✓ On "Refresh" button: Full data reload
+✓ refreshRequests() called: Checks latest request status
+
+Admin Portal Auto-Sync:
+✓ On page load: Loads pending requests from DB
+✓ After "Approve/Reject": Refreshes request list
+✓ On filters: Recent data loaded from DB
+✓ On "Refresh" button: Full data reload
+
+Database as Single Source of Truth:
+✓ All data stored in MySQL database
+✓ No caching on frontend
+✓ Each query gets latest data
+✓ Multiple users see consistent data
+
+================================================================================
+PART 4: DATA INTEGRITY & CONSISTENCY
+================================================================================
+
+FOREIGN KEY RELATIONSHIPS:
+
+restock_requests table:
+├── requested_by → login.id (Pharmacist who requested)
+├── medicine_id → medicines.id (Medicine being requested)
+└── approved_by → login.id (Admin who approved/rejected)
+
+medicines table:
+└── No direct link to restock_requests
+
+TRANSACTION SAFETY:
+
+When admin approves request:
+1. BEGIN TRANSACTION
+2. Update restock_requests status='approved'
+3. Update medicines quantity
+4. COMMIT (both changes atomic)
+5. If error, both changes rolled back
+6. No partial updates possible
+
+UNIQUE CONSTRAINTS:
+
+✓ Each request has unique ID (auto-increment)
+✓ Email must be unique (no duplicate logins)
+✓ Role must be valid ENUM value
+✓ Timestamps auto-managed by database
+
+STATUS VALIDATION:
+
+✓ Request status must be: 'pending', 'approved', or 'rejected'
+✓ Only one status per request
+✓ Cannot change status twice (prevents admin confusion)
+✓ Approval/rejection creates audit trail
+
+================================================================================
+PART 5: TESTING & VERIFICATION
+================================================================================
+
+COMPREHENSIVE TEST RESULTS:
+
+✅ Request Creation
+   - Pharmacist submits request with quantity and reason
+   - Request created with status='pending'
+   - Request ID returned to client
+
+✅ Admin Views Request
+   - Admin sees new request in pending list
+   - Can view medicine name, pharmacist, quantity, reason
+   - Can see request timestamp
+
+✅ Approval Workflow
+   - Admin clicks approve
+   - Old stock: 5 units
+   - New stock: 105 units (5 + 100 requested)
+   - Added quantity: 100 units
+   - Status changed to 'approved'
+
+✅ Pharmacist Sees Update
+   - Inventory shows updated quantity (105 units)
+   - Medicine badge changed from RED to GREEN
+   - Request status shows as APPROVED
+   - Approval date/time displayed
+
+✅ Rejection Workflow
+   - Admin clicks reject
+   - Enters rejection reason
+   - Pharmacist sees REJECTED status
+   - Admin's reason visible to pharmacist
+
+✅ Permission Denied:
+   - Pharmacist cannot access admin endpoints (403)
+   - Admin cannot submit restock requests (403)
+   - Each role restricted to own features
+
+✅ Multiple Requests:
+   - Pharmacist can submit multiple requests
+   - Each request tracked separately
+   - Admin can approve/reject individually
+   - No conflicts or data loss
+
+================================================================================
+PART 6: EXAMPLE DATA FLOW (VISUAL)
+================================================================================
+
+PHARMACIST SUBMITS REQUEST:
+┌─────────────────────────────────┐
+│ POST /api/restock-request       │
+│ {                               │
+│   actor_id: 91,                 │
+│   medicine_id: 17,              │
+│   medicine_name: "Paracetamol",│
+│   requested_quantity: 100,      │
+│   reason: "Low stock"           │
+│ }                               │
+└─────────────────────────────────┘
+            ▼
+┌─────────────────────────────────┐
+│ Database INSERT                 │
+│ restock_requests table          │
+│ ┌─────────────────────────────┐ │
+│ │ id: 5                       │ │
+│ │ medicine_id: 17             │ │
+│ │ requested_by: 91            │ │
+│ │ requested_quantity: 100      │ │
+│ │ status: 'pending'           │ │
+│ │ requested_at: 2026-02-18... │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+            ▼
+┌─────────────────────────────────┐
+│ Response to Pharmacist          │
+│ {                               │
+│   "success": true,              │
+│   "request_id": 5,              │
+│   "message": "Submitted"        │
+│ }                               │
+└─────────────────────────────────┘
+
+ADMIN APPROVES REQUEST:
+┌─────────────────────────────────┐
+│ PUT /api/admin/restock-req/5... │
+│ {                               │
+│   actor_id: 92,                 │
+│   admin_notes: "Approved"       │
+│ }                               │
+└─────────────────────────────────┘
+            ▼
+┌─────────────────────────────────┐
+│ Database UPDATE                 │
+│ ┌─────────────────────────────┐ │
+│ │ restock_requests[id=5]:     │ │
+│ │   status: 'approved'        │ │
+│ │   approved_by: 92           │ │
+│ │   approved_at: 2026-02-18..│ │
+│ │                             │ │
+│ │ medicines[id=17]:           │ │
+│ │   quantity: 5 + 100 = 105   │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+            ▼
+┌─────────────────────────────────┐
+│ Response to Admin               │
+│ {                               │
+│   "message": "Approved",        │
+│   "old_quantity": 5,            │
+│   "new_quantity": 105,          │
+│   "added_quantity": 100         │
+│ }                               │
+└─────────────────────────────────┘
+            ▼
+┌─────────────────────────────────┐
+│ Pharmacist Sees Update          │
+│ GET /api/pharmacist/restock-req │
+│ ►  Status: APPROVED ✓           │
+│ GET /api/pharmacist/inventory   │
+│ ► Paracetamol: 105 units [✓OK]  │
+└─────────────────────────────────┘
+
+================================================================================
+PART 7: SUMMARY - LINK VERIFICATION
+================================================================================
+
+✅ PHARMACIST → ADMIN LINK: VERIFIED
+   - Pharmacist can submit restock requests
+   - Admin receives requests immediately
+   - Admin can view request details
+
+✅ ADMIN → PHARMACIST LINK: VERIFIED
+   - Admin can approve/reject requests
+   - Inventory auto-updates on approval
+   - Pharmacist sees updated stock levels
+   - Pharmacist sees request status
+
+✅ BIDIRECTIONAL COMMUNICATION: VERIFIED
+   - Request flows from pharmacist to admin
+   - Approval flows from admin to pharmacist
+   - Data synchronized in both directions
+   - Feedback given when rejecting
+
+✅ DATABASE INTEGRITY: VERIFIED
+   - All changes transactional
+   - Foreign keys maintained
+   - Data consistency ensured
+   - Audit trail recorded
+
+✅ API ENDPOINTS: ALL FUNCTIONAL
+   - POST /api/restock-request ✓
+   - GET /api/pharmacist/restock-requests ✓
+   - GET /api/admin/restock-requests ✓
+   - PUT /api/admin/restock-request/{id}/approve ✓
+   - PUT /api/admin/restock-request/{id}/reject ✓
+
+✅ UI FEATURES: ALL WORKING
+   - Pharmacist can request restock ✓
+   - Pharmacist can view request status ✓
+   - Admin can view pending requests ✓
+   - Admin can approve/reject ✓
+   - Both see real-time updates (on refresh) ✓
+
+✅ PERMISSIONS: ENFORCED
+   - Pharmacist cannot access admin endpoints ✓
+   - Admin cannot submit requests ✓
+   - Role-based access control working ✓
+   - 403 Forbidden for unauthorized access ✓
+
+================================================================================
+FINAL VERDICT: ✅ COMPLETE BIDIRECTIONAL LINK ESTABLISHED
+================================================================================
+
+The Pharmacist and Admin portals are FULLY CONNECTED with complete
+two-way communication:
+
+1. ✅ Pharmacist can REQUEST restock
+2. ✅ Admin can VIEW requests
+3. ✅ Admin can APPROVE (stocks auto-update)
+4. ✅ Admin can REJECT (with feedback)
+5. ✅ Pharmacist can SEE request status
+6. ✅ Pharmacist can READ admin feedback
+7. ✅ Both parties see consistent data
+8. ✅ All changes recorded with audit trail
+
+READY FOR PRODUCTION USE ✅
+
+================================================================================
