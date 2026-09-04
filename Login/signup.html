@@ -216,6 +216,7 @@
                             <option value="patient">Patient (Book Appointments & View Health Records)</option>
                             <option value="doctor">Doctor (Manage Patients & Prescriptions)</option>
                             <option value="pharmacist">Pharmacist (Manage Medicines & Inventory)</option>
+                            <option value="lab">Lab Technician (Submit Test Results)</option>
                             <option value="admin">Hospital Admin (Manage Hospital Settings & Users)</option>
                         </select>
                     </div>
@@ -282,14 +283,20 @@
             <div id="otp-step" style="display: none;">
                 <div class="login-header">
                     <h1>Verification</h1>
-                    <p>Enter the OTP sent to your email</p>
+                    <p>Enter the OTP sent to your email and phone</p>
                 </div>
                 <form id="otpForm">
                     <div class="form-group">
-                        <label for="otp" class="form-label">One-Time Password</label>
-                        <input type="text" id="otp" class="form-input" placeholder="123456" required style="text-align: center; letter-spacing: 2px;">
+                        <label for="emailOtp" class="form-label">Email OTP</label>
+                        <input type="text" id="emailOtp" class="form-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required style="text-align: center; letter-spacing: 2px;">
                     </div>
+                    <div class="form-group">
+                        <label for="phoneOtp" class="form-label">Phone OTP</label>
+                        <input type="text" id="phoneOtp" class="form-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required style="text-align: center; letter-spacing: 2px;">
+                    </div>
+                    <div id="otp-error" style="color: #e74c3c; margin-bottom: 10px; text-align: center; min-height: 20px;"></div>
                     <button type="submit" class="btn-submit">Verify & Create Account</button>
+                    <button type="button" id="resendOtp" class="btn-submit" style="margin-top: 10px; background: #6c757d;">Resend OTPs</button>
                 </form>
             </div>
         </div>
@@ -297,7 +304,8 @@
 
     <script>
         // API URL configuration - Always use localhost:5000
-        const API_URL = 'http://localhost:5000';
+        const API_URL = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:5000';
+        let pendingSignup = null;
 
         // Toggle doctor fields based on role selection
         document.getElementById('role').addEventListener('change', function() {
@@ -407,33 +415,36 @@
 
             // Disable button to prevent double submission
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Creating Account...';
+            submitBtn.textContent = 'Sending OTPs...';
             errorDiv.textContent = '';
 
             try {
-                const response = await fetch(API_URL + '/signup', {
+                const response = await fetch(API_URL + '/signup/request-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(signupData)
+                    body: JSON.stringify(signupData),
+                    cache: 'no-store'
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Show inline success message and redirect after short delay
-                    const success = document.getElementById('success-message');
-                    if (success) {
-                        success.style.display = 'block';
-                    }
-                    console.log('✅ Signup successful for:', email);
-                    setTimeout(() => window.location.href = 'login.html', 1200);
+                    pendingSignup = { ...signupData, verification_token: data.verification_token };
+                    document.getElementById('signup-step').style.display = 'none';
+                    document.getElementById('otp-step').style.display = 'block';
+                    const notice = data.dev_email_otp && data.dev_phone_otp
+                        ? `Development OTPs: email ${data.dev_email_otp}, phone ${data.dev_phone_otp}`
+                        : data.delivery && data.delivery.email && data.delivery.phone
+                            ? `${data.message}. Check your email and phone messages.`
+                            : 'OTP delivery is not configured. Add SMTP and Twilio settings, then request the codes again.';
+                    document.querySelector('#otp-step .login-header p').textContent = notice;
                 } else {
-                    errorDiv.textContent = data.message || 'Registration failed. Please try again.';
+                        errorDiv.textContent = data.message || 'Registration failed. Please try again.';
                     console.error('Signup failed:', data.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                errorDiv.textContent = 'Connection error. Make sure the server is running on localhost:5000';
+                errorDiv.textContent = error.message || 'Unable to start verification. Please try again.';
             } finally {
                 // Re-enable button
                 submitBtn.disabled = false;
@@ -441,10 +452,69 @@
             }
         });
 
-        document.getElementById('otpForm').addEventListener('submit', function(e) {
+        document.getElementById('otpForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            // Here you would verify the OTP with your backend
-            window.location.href = 'home.html';
+            const errorDiv = document.getElementById('otp-error');
+            const button = this.querySelector('.btn-submit');
+            const emailOtp = document.getElementById('emailOtp').value.trim();
+            const phoneOtp = document.getElementById('phoneOtp').value.trim();
+            if (!/^\d{6}$/.test(emailOtp) || !/^\d{6}$/.test(phoneOtp)) {
+                errorDiv.textContent = 'Enter the 6-digit email and phone OTPs.';
+                return;
+            }
+            button.disabled = true;
+            button.textContent = 'Verifying...';
+            errorDiv.textContent = '';
+            try {
+                const verifyResponse = await fetch(API_URL + '/signup/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ verification_token: pendingSignup.verification_token, email_otp: emailOtp, phone_otp: phoneOtp })
+                });
+                const verifyData = await verifyResponse.json();
+                if (!verifyResponse.ok || !verifyData.success) throw new Error(verifyData.message || 'OTP verification failed');
+
+                const signupResponse = await fetch(API_URL + '/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingSignup)
+                });
+                const signupResult = await signupResponse.json();
+                if (!signupResponse.ok || !signupResult.success) throw new Error(signupResult.message || 'Account creation failed');
+                document.getElementById('otp-step').innerHTML = '<div class="login-header"><h1>Account Created</h1><p class="success-message" style="display:block">Email and phone verified successfully. Redirecting to login...</p></div>';
+                setTimeout(() => window.location.href = 'login.html', 1500);
+            } catch (error) {
+                errorDiv.textContent = error.message;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Verify & Create Account';
+            }
+        });
+
+        document.getElementById('resendOtp').addEventListener('click', async function() {
+            const errorDiv = document.getElementById('otp-error');
+            if (!pendingSignup || !pendingSignup.verification_token) {
+                errorDiv.textContent = 'Please restart signup to request new OTPs.';
+                return;
+            }
+            this.disabled = true;
+            this.textContent = 'Sending...';
+            errorDiv.textContent = '';
+            try {
+                const response = await fetch(API_URL + '/signup/resend-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ verification_token: pendingSignup.verification_token })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Unable to resend OTPs');
+                document.querySelector('#otp-step .login-header p').textContent = data.message;
+            } catch (error) {
+                errorDiv.textContent = error.message;
+            } finally {
+                this.disabled = false;
+                this.textContent = 'Resend OTPs';
+            }
         });
 
         // Password visibility toggle for signup

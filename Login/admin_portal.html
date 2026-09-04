@@ -1492,6 +1492,7 @@
             <button class="tab-btn" onclick="switchTab('restock', event)">📋 Restock Requests</button>
             <button class="tab-btn" onclick="switchTab('medicines', event)">💊 All Medicines <span id="medicinesTabBadge" style="display:none;margin-left:8px;background:#ef4444;color:white;padding:2px 6px;border-radius:12px;font-size:12px;"></span></button>
             <button class="tab-btn" onclick="switchTab('expiring', event)">⏰ Expiring Medicines <span id="expiryTabBadge" style="display:none;margin-left:8px;background:#fbbf24;color:#000;padding:2px 6px;border-radius:12px;font-size:12px;"></span></button>
+            <button class="tab-btn" onclick="switchTab('billing', event)">💳 Billing</button>
             <button class="tab-btn" onclick="switchTab('users', event)">👥 Users</button>
             <button class="tab-btn" onclick="switchTab('reports', event)">📈 Reports</button>
             <button class="tab-btn" onclick="switchTab('profile', event)">⚙️ Settings</button>
@@ -1624,6 +1625,49 @@
             <div id="expiringMedicinesContainer"></div>
         </div>
 
+        <!-- BILLING TAB -->
+        <div id="billing" class="tab-content">
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-value" id="billingTotalRevenue">₹0</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Collected / booked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending Payments</div>
+                    <div class="stat-value" id="billingPendingPayments">₹0</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Awaiting settlement</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Invoices</div>
+                    <div class="stat-value" id="billingInvoiceCount">0</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Generated records</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px; background: white; border-radius: 12px; border: 1px solid var(--border); padding: 18px;">
+                <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px;">
+                    <h3 style="margin: 0;">Recent Invoices</h3>
+                    <button class="btn btn-primary" onclick="loadBillingSummary()">Refresh</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billingTableBody">
+                        <tr><td colspan="6" class="no-data">Loading billing...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ADMIN PROFILE TAB -->
         <div id="profile" class="tab-content">
             <div class="profile-header">
@@ -1735,11 +1779,11 @@
             </div>
 
             <div class="tab-filters">
-                <button class="btn" onclick="filterUsersByRole('all')" style="border-bottom: 3px solid var(--primary);">All Users</button>
-                <button class="btn" onclick="filterUsersByRole('patient')">Patients</button>
-                <button class="btn" onclick="filterUsersByRole('doctor')">Doctors</button>
-                <button class="btn" onclick="filterUsersByRole('pharmacist')">Pharmacists</button>
-                <button class="btn" onclick="filterUsersByRole('admin')">Admins</button>
+                <button class="btn" onclick="filterUsersByRole('all', event)" style="border-bottom: 3px solid var(--primary);">All Users</button>
+                <button class="btn" onclick="filterUsersByRole('patient', event)">Patients</button>
+                <button class="btn" onclick="filterUsersByRole('doctor', event)">Doctors</button>
+                <button class="btn" onclick="filterUsersByRole('pharmacist', event)">Pharmacists</button>
+                <button class="btn" onclick="filterUsersByRole('admin', event)">Admins</button>
             </div>
 
             <table class="table">
@@ -1750,7 +1794,7 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
-                        <th>Registration Date</th>
+                        <th>Phone</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -2076,6 +2120,55 @@
             if (tabName === 'expiring') {
                 loadExpiringMedicines();
             }
+
+            if (tabName === 'billing') {
+                loadBillingSummary();
+            }
+            if (tabName === 'users') {
+                loadAdminUsers();
+            }
+        }
+
+        async function loadBillingSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/api/billing/summary`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Unable to load billing summary');
+                }
+
+                const totalRevenue = Number(data.total_revenue || 0);
+                const pending = Number(data.pending_payments || 0);
+                const invoices = Array.isArray(data.invoices) ? data.invoices : [];
+
+                document.getElementById('billingTotalRevenue').textContent = `₹${formatCurrency(totalRevenue)}`;
+                document.getElementById('billingPendingPayments').textContent = `₹${formatCurrency(pending)}`;
+                document.getElementById('billingInvoiceCount').textContent = String(data.invoices_generated || invoices.length || 0);
+
+                const tbody = document.getElementById('billingTableBody');
+                if (!invoices.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">No invoice data yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = invoices.map(inv => `
+                    <tr>
+                        <td>${escapeHtml(inv.invoice_number || 'INV-0000')}</td>
+                        <td>${escapeHtml(inv.patient_name || 'Patient')}</td>
+                        <td>${escapeHtml(inv.doctor_name || 'Doctor')}</td>
+                        <td>₹${formatCurrency(Number(inv.amount || 0))}</td>
+                        <td><span class="badge ${String(inv.status || 'pending').toLowerCase() === 'paid' ? 'success' : 'warning'}">${escapeHtml(String(inv.status || 'pending'))}</span></td>
+                        <td>${escapeHtml(inv.payment_method || 'Cash')}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Billing summary error:', error);
+                document.getElementById('billingTableBody').innerHTML = '<tr><td colspan="6" class="no-data">Unable to load billing data.</td></tr>';
+            }
+        }
+
+        function formatCurrency(value) {
+            return Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
         }
 
         async function refreshRequests() {
@@ -2544,6 +2637,7 @@
             try {
                 localStorage.removeItem('user');
                 localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('rememberedLogin');
                 fetch('http://localhost:5000/logout', { method: 'POST' }).catch(e => {});
             } catch(e) {
                 console.error('Error during logout:', e);
@@ -2661,6 +2755,9 @@
             if (tabName === 'profile') {
                 updateProfileStatistics();
             }
+            if (tabName === 'users') {
+                loadAdminUsers();
+            }
 
             // Close dropdowns
             document.getElementById('notifDropdown').style.display = 'none';
@@ -2705,8 +2802,9 @@
 
         // User Management Functions
         let currentUserFilter = 'all';
+        let adminUsers = [];
 
-        function filterUsersByRole(role) {
+        function filterUsersByRole(role, evt) {
             currentUserFilter = role;
             filterUsers();
             
@@ -2714,29 +2812,35 @@
             document.querySelectorAll('.tab-filters .btn').forEach(btn => {
                 btn.style.borderBottom = '3px solid transparent';
             });
-            event.target.style.borderBottom = '3px solid var(--primary)';
+            if (evt && evt.currentTarget) evt.currentTarget.style.borderBottom = '3px solid var(--primary)';
+        }
+
+        async function loadAdminUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users?actor_id=${currentUser.id}`);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Unable to load users');
+                adminUsers = Array.isArray(data.users) ? data.users : [];
+                document.getElementById('dashboardTotalUsers').textContent = String(adminUsers.length);
+                filterUsers();
+            } catch (error) {
+                console.error('User list error:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">Unable to load users.</td></tr>';
+            }
         }
 
         function filterUsers() {
             const searchTerm = document.getElementById('userSearchInput').value.toLowerCase();
             const tbody = document.getElementById('usersTableBody');
-            
-            // Mock user data - in production this would come from API
-            const mockUsers = [
-                { id: 1, name: 'Dr. John Smith', email: 'john@hospital.com', role: 'doctor', status: 'Active', joined: '2024-01-15' },
-                { id: 2, name: 'Sarah Johnson', email: 'sarah@hospital.com', role: 'patient', status: 'Active', joined: '2024-01-20' },
-                { id: 3, name: 'Pharmacy Admin', email: 'pharma@hospital.com', role: 'pharmacist', status: 'Active', joined: '2024-01-10' },
-                { id: 4, name: 'Admin User', email: 'admin@hospital.com', role: 'admin', status: 'Active', joined: '2024-01-01' },
-                { id: 5, name: 'Mike Chen', email: 'mike@hospital.com', role: 'doctor', status: 'Active', joined: '2024-02-01' },
-            ];
-            
-            let filtered = mockUsers;
+
+            let filtered = adminUsers;
             if (currentUserFilter !== 'all') {
                 filtered = filtered.filter(u => u.role === currentUserFilter);
             }
             if (searchTerm) {
                 filtered = filtered.filter(u => 
-                    u.name.toLowerCase().includes(searchTerm) ||
+                    (u.full_name || '').toLowerCase().includes(searchTerm) ||
                     u.email.toLowerCase().includes(searchTerm) ||
                     u.role.toLowerCase().includes(searchTerm)
                 );
@@ -2750,11 +2854,11 @@
             tbody.innerHTML = filtered.map(user => `
                 <tr>
                     <td>${user.id}</td>
-                    <td>${user.name}</td>
-                    <td>${user.email}</td>
+                    <td>${escapeHtml(user.full_name || 'Unnamed user')}</td>
+                    <td>${escapeHtml(user.email || '')}</td>
                     <td><span class="role-badge ${user.role}">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span></td>
-                    <td><span style="color: var(--success); font-weight: 600;">● ${user.status}</span></td>
-                    <td>${new Date(user.joined).toLocaleDateString()}</td>
+                    <td><span style="color: var(--success); font-weight: 600;">● Active</span></td>
+                    <td>${user.phone || 'Not provided'}</td>
                     <td>
                         <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="editUser(${user.id})">Edit</button>
                     </td>

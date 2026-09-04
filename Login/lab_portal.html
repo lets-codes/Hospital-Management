@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab Portal</title>
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --border: #dfe3e8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .topbar {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 20px 32px;
+      box-shadow: var(--shadow);
+    }
+    .topbar-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .brand { font-size: 1.7rem; font-weight: 700; }
+    .user-meta { font-size: 0.95rem; opacity: 0.9; }
+    .btn {
+      border: none; border-radius: 8px; font-weight: 700; cursor: pointer; padding: 10px 18px;
+      transition: 0.2s ease;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 28px 20px 60px; }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .stat-value { font-weight: 800; font-size: 2rem; color: var(--primary); }
+    .stat-label { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: var(--shadow);
+      margin-top: 20px;
+    }
+    .section-header {
+      display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .section-title { font-size: 1.3rem; margin: 0; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+      margin-bottom: 20px;
+    }
+    .search-input, .form-input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.96rem;
+      background: #fff;
+    }
+    .search-input { max-width: 280px; }
+    .patient-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px;
+    }
+    .patient-card {
+      background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+      border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    }
+    .patient-card h4 { margin: 0 0 8px; }
+    .meta { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+    .patient-actions { display: flex; gap: 10px; margin-top: 14px; }
+    .alert {
+      padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; display: none;
+      font-weight: 600;
+    }
+    .alert.show { display: block; }
+    .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .modal {
+      display: none; position: fixed; inset: 0; background: rgba(17,24,39,0.5); justify-content: center; align-items: center; z-index: 50;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      width: min(680px, 92vw); background: white; border-radius: 12px; padding: 24px; box-shadow: var(--shadow);
+    }
+    .modal h3 { margin-top: 0; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-row { margin-bottom: 14px; }
+    .label { display: block; margin-bottom: 6px; font-weight: 700; color: var(--text); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .empty-state { color: var(--muted); text-align: center; padding: 30px 12px; }
+    @media (max-width: 760px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .topbar-inner { flex-direction: column; align-items: flex-start; }
+      .search-input { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <div class="brand">Lab Portal</div>
+        <div class="user-meta">Welcome, <span id="labName">Lab Technician</span></div>
+      </div>
+      <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="alertBox" class="alert"></div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="patientCount">0</div>
+        <div class="stat-label">Patients</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="todayTests">0</div>
+        <div class="stat-label">Submitted Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="abnormalCount">0</div>
+        <div class="stat-label">Abnormal</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="section-header">
+        <h2 class="section-title">Patient Records</h2>
+      </div>
+      <div class="toolbar">
+        <input id="patientSearch" class="search-input" type="text" placeholder="Search patient..." />
+      </div>
+      <div id="patientsContainer" class="patient-grid">
+        <div class="empty-state">Loading patients...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultModal" class="modal">
+    <div class="modal-content">
+      <h3>Submit Lab Result</h3>
+      <div class="grid-2">
+        <div class="form-row">
+          <label class="label">Patient</label>
+          <input id="resultPatientName" class="form-input" type="text" readonly />
+        </div>
+        <div class="form-row">
+          <label class="label">Test Name</label>
+          <input id="resultTestName" class="form-input" type="text" placeholder="CBC, Lipid Panel..." />
+        </div>
+        <div class="form-row">
+          <label class="label">Result Value</label>
+          <input id="resultValue" class="form-input" type="text" placeholder="e.g. 5.2" />
+        </div>
+        <div class="form-row">
+          <label class="label">Unit</label>
+          <input id="resultUnit" class="form-input" type="text" placeholder="mg/dL, mmol/L" />
+        </div>
+        <div class="form-row">
+          <label class="label">Reference Range</label>
+          <input id="resultRefRange" class="form-input" type="text" placeholder="3.5-5.5 mmol/L" />
+        </div>
+        <div class="form-row">
+          <label class="label">Status</label>
+          <select id="resultStatus" class="form-input">
+            <option value="normal">Normal</option>
+            <option value="abnormal">Abnormal</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="label">Notes</label>
+        <textarea id="resultNotes" rows="3" placeholder="Optional notes for doctor or patient"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" type="button" onclick="closeResultModal()">Cancel</button>
+        <button class="btn btn-primary" type="button" onclick="submitLabResult()">Save Result</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:5000' : window.location.origin;
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    let allPatients = [];
+    let currentPatientId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!user || user.role !== 'lab') {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      document.getElementById('labName').textContent = user.full_name || user.name || 'Lab Technician';
+      loadPatients();
+      document.getElementById('patientSearch').addEventListener('input', filterPatients);
+    });
+
+    async function loadPatients() {
+      try {
+        const res = await fetch(`${API_BASE}/api/lab/patients?actor_id=${user.id}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Could not load patients');
+        }
+
+        allPatients = data.patients || [];
+        renderPatients(allPatients);
+        updateStats();
+      } catch (err) {
+        showAlert(err.message || 'Could not load patients', 'error');
+        document.getElementById('patientsContainer').innerHTML = '<div class="empty-state">Unable to load patients.</div>';
+      }
+    }
+
+    function filterPatients() {
+      const q = document.getElementById('patientSearch').value.trim().toLowerCase();
+      const filtered = allPatients.filter(patient => {
+        const text = `${patient.full_name || ''} ${patient.email || ''} ${patient.phone || ''}`.toLowerCase();
+        return text.includes(q);
+      });
+      renderPatients(filtered);
+    }
+
+    function renderPatients(patients) {
+      const container = document.getElementById('patientsContainer');
+      if (!patients.length) {
+        container.innerHTML = '<div class="empty-state">No patients found.</div>';
+        return;
+      }
+
+      container.innerHTML = patients.map(patient => `
+        <div class="patient-card">
+          <h4>${escapeHtml(patient.full_name || 'Unnamed Patient')}</h4>
+          <div class="meta">
+            <div>Email: ${escapeHtml(patient.email || 'N/A')}</div>
+            <div>Phone: ${escapeHtml(patient.phone || 'N/A')}</div>
+          </div>
+          <div class="patient-actions">
+            <button class="btn btn-primary" onclick="openResultModal(${patient.id}, '${escapeHtml(patient.full_name || 'Patient').replace(/'/g, "\\'")}')">Submit Result</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateStats() {
+      document.getElementById('patientCount').textContent = allPatients.length;
+      document.getElementById('todayTests').textContent = '0';
+      document.getElementById('abnormalCount').textContent = '0';
+    }
+
+    function openResultModal(patientId, patientName) {
+      currentPatientId = patientId;
+      document.getElementById('resultPatientName').value = patientName;
+      document.getElementById('resultTestName').value = '';
+      document.getElementById('resultValue').value = '';
+      document.getElementById('resultUnit').value = '';
+      document.getElementById('resultRefRange').value = '';
+      document.getElementById('resultStatus').value = 'normal';
+      document.getElementById('resultNotes').value = '';
+      document.getElementById('resultModal').classList.add('show');
+    }
+
+    function closeResultModal() {
+      document.getElementById('resultModal').classList.remove('show');
+      currentPatientId = null;
+    }
+
+    async function submitLabResult() {
+      const testName = document.getElementById('resultTestName').value.trim();
+      const resultValue = document.getElementById('resultValue').value.trim();
+      const status = document.getElementById('resultStatus').value;
+      const unit = document.getElementById('resultUnit').value.trim();
+      const refRange = document.getElementById('resultRefRange').value.trim();
+      const notes = document.getElementById('resultNotes').value.trim();
+
+      if (!currentPatientId || !testName || !resultValue) {
+        showAlert('Please fill in patient, test name, and result value.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/lab-result`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actor_id: user.id,
+            patient_id: currentPatientId,
+            doctor_id: user.id,
+            test_name: testName,
+            result_value: resultValue,
+            result_unit: unit,
+            reference_range: refRange,
+            status,
+            notes
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Failed to save result');
+        }
+
+        showAlert('Lab result saved and sent to patient portal.', 'success');
+        closeResultModal();
+      } catch (err) {
+        showAlert(err.message || 'Error saving result', 'error');
+      }
+    }
+
+    function showAlert(message, type) {
+      const box = document.getElementById('alertBox');
+      box.textContent = message;
+      box.className = `alert show alert-${type}`;
+      setTimeout(() => box.classList.remove('show'), 4000);
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('rememberedLogin');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

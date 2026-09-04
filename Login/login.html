@@ -214,16 +214,16 @@
                 <form id="loginForm">
                     <div class="form-group">
                         <label for="email" class="form-label">Email Address</label>
-                        <input type="email" id="email" class="form-input" placeholder="name@company.com" required>
+                        <input type="email" id="email" class="form-input" placeholder="name@company.com" required autocomplete="username">
                     </div>
                     <div class="form-group password-wrap">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                        <input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
                         <button type="button" class="toggle-password" aria-label="Toggle password">Show</button>
                     </div>
                     <div class="form-actions">
                         <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" style="margin-right: 8px;"> Remember me
+                            <input id="rememberMe" type="checkbox" style="margin-right: 8px;"> Remember me
                         </label>
                         <a href="forgot_password.html" class="forgot-password">Forgot password?</a>
                     </div>
@@ -255,11 +255,51 @@
         // API URL configuration - Always use localhost:5000
         const API_URL = 'http://localhost:5000';
 
+        function getSavedRememberedLogin() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('rememberedLogin') || 'null');
+                return saved && saved.email ? saved : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function redirectToUserDashboard(user) {
+            if (!user || !user.role) return;
+            const role = String(user.role).toLowerCase();
+            if (role === 'doctor') {
+                window.location.href = 'doctor_dashboard.html';
+            } else if (role === 'pharmacist') {
+                window.location.href = 'pharmacist_portal.html';
+            } else if (role === 'admin') {
+                window.location.href = 'admin_portal.html';
+            } else if (role === 'lab') {
+                window.location.href = 'lab_portal.html';
+            } else {
+                window.location.href = 'patient_dashboard.html';
+            }
+        }
+
+        (function restoreRememberedLogin() {
+            const remembered = getSavedRememberedLogin();
+            if (remembered) {
+                document.getElementById('email').value = remembered.email || '';
+                document.getElementById('password').value = remembered.password || '';
+                document.getElementById('rememberMe').checked = true;
+            }
+
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (localStorage.getItem('isLoggedIn') === 'true' && user) {
+                redirectToUserDashboard(user);
+            }
+        })();
+
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
             const submitBtn = document.querySelector('.btn-submit');
             const errorDiv = document.getElementById('error-message');
 
@@ -289,21 +329,20 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Store user data in localStorage
                     localStorage.setItem('user', JSON.stringify(data.user));
                     localStorage.setItem('isLoggedIn', 'true');
+
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedLogin', JSON.stringify({
+                            email: email,
+                            password: password
+                        }));
+                    } else {
+                        localStorage.removeItem('rememberedLogin');
+                    }
                     
                     console.log('Login successful for:', email, 'Role:', data.user.role);
-                    // Redirect based on role
-                    if (data.user.role === 'doctor') {
-                        window.location.href = 'doctor_dashboard.html';
-                    } else if (data.user.role === 'pharmacist') {
-                        window.location.href = 'pharmacist_portal.html';
-                    } else if (data.user.role === 'admin') {
-                        window.location.href = 'admin_portal.html';
-                    } else {
-                        window.location.href = 'patient_dashboard.html';
-                    }
+                    redirectToUserDashboard(data.user);
                 } else {
                     errorDiv.textContent = data.message || 'Invalid Email or Password';
                     console.error('Login failed:', data.message);

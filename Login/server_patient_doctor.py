@@ -16,12 +16,42 @@ import os
 import queue
 import threading
 import time
+import re
+import smtplib
+import base64
+import urllib.parse
+import urllib.request
+import phonenumbers
+from phonenumbers import NumberParseException
+from email.message import EmailMessage
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def _load_local_env():
+    """Load simple KEY=VALUE settings without requiring an extra package."""
+    env_path = os.path.join(BASE_DIR, '.env')
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, encoding='utf-8') as env_file:
+        for line in env_file:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+_load_local_env()
+
 app = Flask(__name__, static_folder=BASE_DIR, static_url_path='')
 CORS(app, origins=['*'])
+
+@app.after_request
+def prevent_stale_browser_assets(response):
+    if request.path.endswith('.html') or request.path.startswith('/signup'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+    return response
 
 # Database Configuration
 DB_CONFIG = {
@@ -64,11 +94,276 @@ def validate_email(email):
     import re
     return re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email) is not None
 
+def validate_phone(phone):
+    """Validate a real possible phone number in international format."""
+    try:
+        parsed = phonenumbers.parse(phone or '', os.getenv('DEFAULT_PHONE_REGION', 'IN'))
+        return phonenumbers.is_valid_number(parsed)
+    except NumberParseException:
+        return False
+
+def normalize_phone(phone):
+    parsed = phonenumbers.parse(phone or '', os.getenv('DEFAULT_PHONE_REGION', 'IN'))
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+
+def ensure_signup_verifications_table_exists():
+    conn = get_db_connection()
+    if not conn:
+        return
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS signup_verifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                verification_token CHAR(64) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL,
+                phone VARCHAR(32) NOT NULL,
+                signup_data JSON NOT NULL,
+                email_otp_hash CHAR(64) NOT NULL,
+                phone_otp_hash CHAR(64) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                email_verified TINYINT(1) DEFAULT 0,
+                phone_verified TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_signup_verification_email (email)
+            )
+        ''')
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+def _otp_hash(value):
+    import hashlib
+    return hashlib.sha256(value.encode('utf-8')).hexdigest()
+
+def _send_signup_otp(email, phone, email_otp, phone_otp):
+    """Send OTPs when integrations are configured; log them for local development."""
+    delivery = {'email': False, 'phone': False, 'errors': []}
+    smtp_host = os.getenv('SMTP_HOST')
+    if smtp_host:
+        try:
+            message = EmailMessage()
+            message['Subject'] = 'Hospital account verification code'
+            message['From'] = os.getenv('SMTP_FROM', 'no-reply@localhost')
+            message['To'] = email
+            message.set_content(f'Your email verification code is {email_otp}. It expires in 10 minutes.')
+            with smtplib.SMTP(smtp_host, int(os.getenv('SMTP_PORT', '587')), timeout=15) as server:
+                if os.getenv('SMTP_TLS', 'true').lower() == 'true':
+                    server.starttls()
+                smtp_user = os.getenv('SMTP_USER')
+                if smtp_user:
+                    server.login(smtp_user, os.getenv('SMTP_PASSWORD', ''))
+                server.send_message(message)
+            delivery['email'] = True
+        except Exception as error:
+            delivery['errors'].append(f'email delivery failed: {error}')
+    else:
+        print(f'DEV EMAIL OTP for {email}: {email_otp}')
+
+    twilio_sid = os.getenv('TWILIO_ACCOUNT_SID')
+    twilio_token = os.getenv('TWILIO_AUTH_TOKEN')
+    twilio_from = os.getenv('TWILIO_FROM_NUMBER')
+    if twilio_sid and twilio_token and twilio_from:
+        payload = urllib.parse.urlencode({
+            'To': phone,
+            'From': twilio_from,
+            'Body': f'Your hospital account verification code is {phone_otp}. It expires in 10 minutes.'
+        }).encode('utf-8')
+        auth = base64.b64encode(f'{twilio_sid}:{twilio_token}'.encode('utf-8')).decode('ascii')
+        request = urllib.request.Request(
+            f'https://api.twilio.com/2010-04-01/Accounts/{twilio_sid}/Messages.json',
+            data=payload,
+            headers={'Authorization': f'Basic {auth}'},
+            method='POST'
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15):
+                pass
+            delivery['phone'] = True
+        except Exception as error:
+            delivery['errors'].append(f'phone delivery failed: {error}')
+    else:
+        # Local fallback keeps development testable without exposing OTPs in the browser.
+        print(f'DEV PHONE OTP for {phone}: {phone_otp}')
+    if delivery['errors']:
+        print('OTP delivery warning: ' + '; '.join(delivery['errors']))
+    return delivery
+
 def validate_password(password):
     """Validate password length"""
     return password and len(password) >= 6
 
+def ensure_login_role_support():
+    """Ensure the DB accepts lab roles and fix any previously stored blank lab roles."""
+    conn = get_db_connection()
+    if not conn:
+        print('Skipping role migration: DB connection unavailable')
+        return
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE login MODIFY COLUMN role ENUM('patient','doctor','admin','pharmacist','lab') DEFAULT 'patient'")
+        cursor.execute("UPDATE login SET role = 'lab' WHERE role = '' AND email LIKE 'lab_%@%' ")
+        cursor.execute("UPDATE login SET role = 'patient' WHERE role = '' AND email NOT LIKE 'lab_%@%' ")
+        conn.commit()
+        print('OK - login role support ensured (includes lab)')
+    except Exception as e:
+        print(f'Warning: could not normalize login role enum: {e}')
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        cursor.close()
+        conn.close()
+
+# Initialize role support once the app is ready to start.
+ensure_login_role_support()
+
 # ============ AUTHENTICATION ENDPOINTS ============
+
+@app.route('/signup/request-otp', methods=['POST'])
+def request_signup_otp():
+    """Validate signup details and send separate email and phone OTPs."""
+    try:
+        data = request.json or {}
+        role = str(data.get('role', 'patient')).strip().lower()
+        fullname = str(data.get('fullname', '')).strip()
+        email = str(data.get('email', '')).strip().lower()
+        phone = str(data.get('phone', '')).strip()
+        password = data.get('password', '')
+
+        if not all([role, fullname, email, phone, password]):
+            return jsonify({'message': 'Full name, email, phone, password, and role are required'}), 400
+        if role not in ['patient', 'doctor', 'pharmacist', 'admin', 'lab']:
+            return jsonify({'message': 'Invalid role'}), 400
+        if not validate_email(email):
+            return jsonify({'message': 'Please enter a valid email address'}), 400
+        if not validate_phone(phone):
+            return jsonify({'message': 'Please enter a real, valid phone number with country code (for example, +919876543210)'}), 400
+        phone = normalize_phone(phone)
+        if not validate_password(password):
+            return jsonify({'message': 'Password must be at least 6 characters'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database connection error - MySQL not running?'}), 500
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM login WHERE email = %s OR phone = %s', (email, phone))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'That email or phone number is already registered'}), 409
+
+        email_otp = f'{secrets.randbelow(1000000):06d}'
+        phone_otp = f'{secrets.randbelow(1000000):06d}'
+        token = secrets.token_hex(32)
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
+        signup_data = {key: value for key, value in data.items() if key != 'password'}
+        signup_data.update({'role': role, 'fullname': fullname, 'email': email, 'phone': phone})
+        signup_data['password_hash'] = password_hash
+        cursor.execute('''
+            INSERT INTO signup_verifications
+            (verification_token, email, phone, signup_data, email_otp_hash, phone_otp_hash, expires_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (token, email, phone, json.dumps(signup_data), _otp_hash(email_otp),
+              _otp_hash(phone_otp), datetime.now() + timedelta(minutes=10)))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        try:
+            delivery = _send_signup_otp(email, phone, email_otp, phone_otp)
+        except Exception as error:
+            print(f'OTP delivery failed after pending signup was created: {error}')
+            delivery = {'email': False, 'phone': False, 'errors': [str(error)]}
+        response = {'success': True, 'message': 'Verification codes sent to your email and phone', 'verification_token': token,
+                'delivery': {'email': delivery['email'], 'phone': delivery['phone']}}
+        if os.getenv('SIGNUP_DEV_OTP', 'false').lower() == 'true':
+            response['dev_email_otp'] = email_otp
+            response['dev_phone_otp'] = phone_otp
+        if (not delivery['email'] or not delivery['phone']) and os.getenv('SIGNUP_DEV_OTP', 'false').lower() != 'true':
+            return jsonify({'message': 'Real email and SMS delivery is not configured or failed. Configure SMTP and Twilio, then try again.'}), 503
+        return jsonify(response), 200
+    except Exception as e:
+        print(f'Error requesting signup OTP: {e}')
+        return jsonify({'message': 'Unable to send verification codes'}), 500
+
+@app.route('/signup/verify-otp', methods=['POST'])
+def verify_signup_otp():
+    """Verify both OTPs and return a one-time token for account creation."""
+    try:
+        data = request.json or {}
+        token = str(data.get('verification_token', '')).strip()
+        email_otp = str(data.get('email_otp', '')).strip()
+        phone_otp = str(data.get('phone_otp', '')).strip()
+        if not token or not email_otp or not phone_otp:
+            return jsonify({'message': 'Both email and phone OTPs are required'}), 400
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database connection error'}), 500
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM signup_verifications WHERE verification_token = %s AND expires_at > NOW()', (token,))
+        verification = cursor.fetchone()
+        if not verification:
+            cursor.close(); conn.close()
+            return jsonify({'message': 'Verification expired. Please request new OTPs.'}), 400
+        if _otp_hash(email_otp) != verification['email_otp_hash']:
+            cursor.close(); conn.close()
+            return jsonify({'message': 'Invalid email OTP'}), 400
+        if _otp_hash(phone_otp) != verification['phone_otp_hash']:
+            cursor.close(); conn.close()
+            return jsonify({'message': 'Invalid phone OTP'}), 400
+        cursor.execute('UPDATE signup_verifications SET email_verified = 1, phone_verified = 1 WHERE id = %s', (verification['id'],))
+        conn.commit()
+        cursor.close(); conn.close()
+        return jsonify({'success': True, 'message': 'Email and phone verified', 'verification_token': token}), 200
+    except Exception as e:
+        print(f'Error verifying signup OTP: {e}')
+        return jsonify({'message': 'Unable to verify OTPs'}), 500
+
+@app.route('/signup/resend-otp', methods=['POST'])
+def resend_signup_otp():
+    """Issue fresh OTPs for an existing pending signup."""
+    try:
+        data = request.json or {}
+        token = str(data.get('verification_token', '')).strip()
+        if not token:
+            return jsonify({'message': 'Verification token is required'}), 400
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database connection error'}), 500
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM signup_verifications WHERE verification_token = %s', (token,))
+        verification = cursor.fetchone()
+        if not verification:
+            cursor.close(); conn.close()
+            return jsonify({'message': 'Signup verification was not found. Start again.'}), 404
+        email_otp = f'{secrets.randbelow(1000000):06d}'
+        phone_otp = f'{secrets.randbelow(1000000):06d}'
+        cursor.execute('''
+            UPDATE signup_verifications
+            SET email_otp_hash = %s, phone_otp_hash = %s, expires_at = %s,
+                email_verified = 0, phone_verified = 0
+            WHERE id = %s
+        ''', (_otp_hash(email_otp), _otp_hash(phone_otp), datetime.now() + timedelta(minutes=10), verification['id']))
+        conn.commit()
+        cursor.close(); conn.close()
+        try:
+            delivery = _send_signup_otp(verification['email'], verification['phone'], email_otp, phone_otp)
+        except Exception as error:
+            print(f'OTP resend delivery failed: {error}')
+            delivery = {'email': False, 'phone': False, 'errors': [str(error)]}
+        response = {'success': True, 'message': 'New verification codes sent',
+                'delivery': {'email': delivery['email'], 'phone': delivery['phone']}}
+        if os.getenv('SIGNUP_DEV_OTP', 'false').lower() == 'true':
+            response.update({'dev_email_otp': email_otp, 'dev_phone_otp': phone_otp})
+        if (not delivery['email'] or not delivery['phone']) and os.getenv('SIGNUP_DEV_OTP', 'false').lower() != 'true':
+            return jsonify({'message': 'Real email and SMS delivery is not configured or failed. Configure SMTP and Twilio, then try again.'}), 503
+        return jsonify(response), 200
+    except Exception as e:
+        print(f'Error resending signup OTP: {e}')
+        return jsonify({'message': 'Unable to resend verification codes'}), 500
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -80,6 +375,7 @@ def signup():
         email = data.get('email', '').strip().lower()
         phone = data.get('phone', '').strip()
         password = data.get('password', '')
+        verification_token = str(data.get('verification_token', '')).strip()
 
         # Validation
         if not all([role, fullname, email, phone, password]):
@@ -91,11 +387,18 @@ def signup():
             if not password: missing.append('password')
             return jsonify({'message': f'Missing fields: {", ".join(missing)}'}), 400
 
-        if role not in ['patient', 'doctor', 'pharmacist', 'admin']:
-            return jsonify({'message': f'Invalid role: {role}. Must be "patient", "doctor", "pharmacist", or "admin"'}), 400
+        if role not in ['patient', 'doctor', 'pharmacist', 'admin', 'lab']:
+            return jsonify({'message': f'Invalid role: {role}. Must be "patient", "doctor", "pharmacist", "admin", or "lab"'}), 400
 
         if not validate_email(email):
             return jsonify({'message': f'Invalid email format: {email}'}), 400
+
+        if not validate_phone(phone):
+            return jsonify({'message': 'Invalid phone number. Use 10-15 digits.'}), 400
+        phone = normalize_phone(phone)
+
+        if not verification_token:
+            return jsonify({'message': 'Verify your email and phone before creating an account'}), 403
 
         if not validate_password(password):
             return jsonify({'message': 'Password must be at least 6 characters'}), 400
@@ -107,6 +410,25 @@ def signup():
         cursor = conn.cursor()
 
         try:
+            cursor.execute('''
+                SELECT id, signup_data FROM signup_verifications
+                WHERE verification_token = %s AND email = %s AND phone = %s
+                  AND email_verified = 1 AND phone_verified = 1 AND expires_at > NOW()
+            ''', (verification_token, email, phone))
+            verification = cursor.fetchone()
+            if not verification:
+                cursor.close()
+                conn.close()
+                return jsonify({'message': 'Email and phone verification is required or has expired'}), 403
+
+            pending_data = json.loads(verification[1])
+            data = pending_data
+            role = data.get('role', 'patient').strip().lower()
+            fullname = data.get('fullname', '').strip()
+            email = data.get('email', '').strip().lower()
+            phone = data.get('phone', '').strip()
+            password = data.get('password_hash', '')
+
             # Check if email already exists
             cursor.execute('SELECT id, role FROM login WHERE email = %s', (email,))
             existing = cursor.fetchone()
@@ -116,7 +438,7 @@ def signup():
                 return jsonify({'message': f'Email {email} is already registered'}), 409
 
             # Hash password
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
+            hashed_password = password if password.startswith('$2') else bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(10)).decode('utf-8')
 
             # Build insert query based on role
             if role == 'doctor':
@@ -154,6 +476,8 @@ def signup():
 
             conn.commit()
             user_id = cursor.lastrowid
+            cursor.execute('DELETE FROM signup_verifications WHERE verification_token = %s', (verification_token,))
+            conn.commit()
             cursor.close()
             conn.close()
 
@@ -995,21 +1319,26 @@ def get_doctors():
 
 @app.route('/api/lab-result', methods=['POST'])
 def api_add_lab_result():
-    """Add lab result for patient"""
+    """Add lab result for patient from lab or doctor account"""
     try:
-        data = request.json
-        patient_id = data.get('patient_id')
-        doctor_id = data.get('doctor_id')
-        test_name = data.get('test_name')
-        result_value = data.get('result_value')
-        result_unit = data.get('result_unit', '')
-        reference_range = data.get('reference_range', '')
-        status = data.get('status', 'normal')
-        notes = data.get('notes', '')
-        test_date = data.get('test_date', datetime.now().strftime('%Y-%m-%d'))
+        data = request.json or {}
+        actor_id = data.get('actor_id')
+        role = _get_user_role(actor_id) if actor_id else None
+        if role not in ['lab', 'doctor']:
+            return jsonify({'message': 'Only lab technicians and doctors can submit lab results'}), 403
 
-        if not all([patient_id, doctor_id, test_name, result_value]):
-            return jsonify({'message': 'Missing required fields'}), 400
+        patient_id = data.get('patient_id')
+        doctor_id = data.get('doctor_id') or actor_id
+        test_name = (data.get('test_name') or '').strip()
+        result_value = data.get('result_value')
+        result_unit = (data.get('result_unit') or '').strip()
+        reference_range = (data.get('reference_range') or '').strip()
+        status = (data.get('status') or 'normal').strip().lower()
+        notes = (data.get('notes') or '').strip()
+        test_date = data.get('test_date') or datetime.now().strftime('%Y-%m-%d')
+
+        if not all([patient_id, test_name, result_value]):
+            return jsonify({'message': 'Missing required fields: patient_id, test_name, and result_value'}), 400
 
         conn = get_db_connection()
         if not conn:
@@ -1021,8 +1350,8 @@ def api_add_lab_result():
         result_id = cursor.lastrowid
         cursor.close()
         conn.close()
-        print(f"OK - Lab result added for patient {patient_id}")
-        return jsonify({'message': 'Lab result added', 'result_id': result_id}), 201
+        print(f"OK - Lab result added for patient {patient_id} by {actor_id}")
+        return jsonify({'message': 'Lab result added', 'result_id': result_id, 'patient_id': patient_id, 'status': status}), 201
     except Exception as e:
         print(f"Error adding lab result: {e}")
         return jsonify({'message': str(e)}), 500
@@ -1035,31 +1364,59 @@ def api_get_lab_results(patient_id):
         if not conn:
             return jsonify({'message': 'Database error'}), 500
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM lab_results WHERE patient_id = %s ORDER BY test_date DESC", (patient_id,))
+        cursor.execute("""
+            SELECT lr.*, l.full_name AS doctor_name
+            FROM lab_results lr
+            LEFT JOIN login l ON lr.doctor_id = l.id
+            WHERE lr.patient_id = %s
+            ORDER BY lr.test_date DESC
+        """, (patient_id,))
         results = cursor.fetchall()
-        # Convert date objects to strings
         for r in results:
-            if r['test_date']:
+            if r.get('test_date'):
                 r['test_date'] = str(r['test_date'])
-            if 'created_at' in r and r['created_at']:
+            if r.get('created_at'):
                 r['created_at'] = str(r['created_at'])
         cursor.close()
         conn.close()
-        return jsonify({'lab_results': results}), 200
+        return jsonify({'lab_results': results, 'results': results}), 200
     except Exception as e:
         print(f"Error getting lab results: {e}")
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/lab/patients', methods=['GET'])
+def api_get_lab_patients():
+    """Get list of patients for lab portal"""
+    try:
+        actor_id = request.args.get('actor_id')
+        role = _get_user_role(actor_id) if actor_id else None
+        if role not in ['lab', 'admin', 'doctor']:
+            return jsonify({'message': 'Only lab staff, doctor, or admin can access patient list'}), 403
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database error'}), 500
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, full_name, email, phone FROM login WHERE role = 'patient' ORDER BY full_name")
+        patients = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'patients': patients}), 200
+    except Exception as e:
+        print(f"Error getting patient list: {e}")
         return jsonify({'message': str(e)}), 500
 
 @app.route('/api/alert', methods=['POST'])
 def api_add_alert():
     """Add patient alert"""
     try:
-        data = request.json
+        data = request.json or {}
         patient_id = data.get('patient_id')
         doctor_id = data.get('doctor_id', 0)
         alert_message = data.get('alert_message')
-        severity = data.get('severity', 'low')
-        alert_type = data.get('alert_type', '')
+        severity = (data.get('severity', 'low') or 'low').strip().lower()
+        alert_type = (data.get('alert_type') or '').strip()
+        alert_title = (data.get('alert_title') or alert_type or 'Patient Alert').strip()
 
         if not all([patient_id, alert_message]):
             return jsonify({'message': 'Missing required fields'}), 400
@@ -1068,7 +1425,10 @@ def api_add_alert():
         if not conn:
             return jsonify({'message': 'Database error'}), 500
         cursor = conn.cursor()
-        cursor.execute("""INSERT INTO patient_alerts (patient_id, alert_title, alert_message, severity, alert_type, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())""", (patient_id, alert_type, alert_message, severity, alert_type, doctor_id))
+        cursor.execute(
+            """INSERT INTO patient_alerts (patient_id, alert_title, alert_message, severity, alert_type, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())""",
+            (patient_id, alert_title, alert_message, severity, alert_type, doctor_id)
+        )
         conn.commit()
         alert_id = cursor.lastrowid
         cursor.close()
@@ -1087,12 +1447,19 @@ def api_get_alerts(patient_id):
         if not conn:
             return jsonify({'message': 'Database error'}), 500
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM patient_alerts WHERE patient_id = %s ORDER BY created_at DESC", (patient_id,))
+        cursor.execute("""
+            SELECT pa.*, l.full_name AS created_by_name
+            FROM patient_alerts pa
+            LEFT JOIN login l ON l.id = pa.created_by
+            WHERE pa.patient_id = %s
+            ORDER BY pa.created_at DESC
+        """, (patient_id,))
         alerts = cursor.fetchall()
-        # Convert datetime objects to strings
         for a in alerts:
-            if 'created_at' in a and a['created_at']:
+            if a.get('created_at'):
                 a['created_at'] = str(a['created_at'])
+            if not a.get('severity'):
+                a['severity'] = 'low'
         cursor.close()
         conn.close()
         return jsonify({'alerts': alerts}), 200
@@ -1120,11 +1487,11 @@ def api_mark_alert_read(alert_id):
 def api_schedule_followup():
     """Schedule follow-up appointment"""
     try:
-        data = request.json
+        data = request.json or {}
         patient_id = data.get('patient_id')
         doctor_id = data.get('doctor_id')
-        followup_date = data.get('followup_date')
-        followup_time = data.get('followup_time')
+        followup_date = data.get('followup_date') or data.get('follow_up_date')
+        followup_time = data.get('followup_time') or data.get('follow_up_time')
         reason = data.get('reason', '')
 
         if not all([patient_id, doctor_id, followup_date, followup_time]):
@@ -1134,7 +1501,10 @@ def api_schedule_followup():
         if not conn:
             return jsonify({'message': 'Database error'}), 500
         cursor = conn.cursor()
-        cursor.execute("""INSERT INTO follow_ups (patient_id, doctor_id, follow_up_date, follow_up_time, reason, scheduled_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())""", (patient_id, doctor_id, followup_date, followup_time, reason, doctor_id))
+        cursor.execute(
+            """INSERT INTO follow_ups (patient_id, doctor_id, follow_up_date, follow_up_time, reason, scheduled_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())""",
+            (patient_id, doctor_id, followup_date, followup_time, reason, doctor_id)
+        )
         conn.commit()
         followup_id = cursor.lastrowid
         cursor.close()
@@ -1153,14 +1523,21 @@ def api_get_followups(patient_id):
         if not conn:
             return jsonify({'message': 'Database error'}), 500
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM follow_ups WHERE patient_id = %s ORDER BY follow_up_date ASC", (patient_id,))
+        cursor.execute("""
+            SELECT fu.*, d.full_name AS doctor_name
+            FROM follow_ups fu
+            LEFT JOIN login d ON d.id = fu.doctor_id
+            WHERE fu.patient_id = %s
+            ORDER BY fu.follow_up_date ASC, fu.follow_up_time ASC
+        """, (patient_id,))
         followups = cursor.fetchall()
-        # Convert date/time objects to strings for JSON
         for f in followups:
-            if f['follow_up_date']:
+            if f.get('follow_up_date'):
                 f['follow_up_date'] = str(f['follow_up_date'])
-            if f['follow_up_time']:
+            if f.get('follow_up_time'):
                 f['follow_up_time'] = str(f['follow_up_time'])
+            if f.get('created_at'):
+                f['created_at'] = str(f['created_at'])
         cursor.close()
         conn.close()
         return jsonify({'followups': followups}), 200
@@ -1600,7 +1977,7 @@ def api_update_user_role(user_id):
             return jsonify({'message': 'Only admin can update roles'}), 403
 
         new_role = data.get('role', '').strip().lower()
-        if new_role not in ['patient', 'doctor', 'pharmacist', 'admin']:
+        if new_role not in ['patient', 'doctor', 'pharmacist', 'admin', 'lab']:
             return jsonify({'message': f'Invalid role: {new_role}'}), 400
 
         conn = get_db_connection()
@@ -1689,6 +2066,122 @@ def api_update_hospital_settings():
     except Exception as e:
         print(f"Error updating settings: {e}")
         return jsonify({'message': str(e)}), 500
+
+
+@app.route('/api/billing/summary', methods=['GET'])
+def api_billing_summary():
+    """Return net revenue, pending payment totals and recent invoices."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database error'}), 500
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT i.*, p.full_name AS patient_name, d.full_name AS doctor_name
+            FROM billing_invoices i
+            LEFT JOIN login p ON p.id = i.patient_id
+            LEFT JOIN login d ON d.id = i.doctor_id
+            ORDER BY i.created_at DESC
+        ''')
+        invoices = cursor.fetchall()
+        cursor.close(); conn.close()
+
+        total_revenue = sum((float(inv.get('amount') or 0) for inv in invoices if str(inv.get('status', '')).lower() in {'paid', 'partial'}))
+        pending_payments = sum((float(inv.get('amount') or 0) for inv in invoices if str(inv.get('status', '')).lower() not in {'paid', 'partial'}))
+        invoice_count = len(invoices)
+
+        if not invoices:
+            # Fallback to appointments if there are no invoice rows yet.
+            fallback_conn = get_db_connection()
+            if fallback_conn:
+                fallback_cursor = fallback_conn.cursor(dictionary=True)
+                fallback_cursor.execute('''
+                    SELECT a.id AS appointment_id, a.patient_id, a.doctor_id, a.appointment_date, a.appointment_time,
+                           l_patient.full_name AS patient_name, l_doctor.full_name AS doctor_name,
+                           COALESCE(l_doctor.consultation_fee, 500) AS amount
+                    FROM appointments a
+                    LEFT JOIN login l_patient ON l_patient.id = a.patient_id
+                    LEFT JOIN login l_doctor ON l_doctor.id = a.doctor_id
+                    ORDER BY a.appointment_date DESC, a.appointment_time DESC
+                ''')
+                invoices = fallback_cursor.fetchall()
+                fallback_cursor.close(); fallback_conn.close()
+                total_revenue = sum((float(inv.get('amount') or 0) for inv in invoices))
+                pending_payments = total_revenue
+                invoice_count = len(invoices)
+
+        payload = {
+            'total_revenue': round(total_revenue, 2),
+            'pending_payments': round(pending_payments, 2),
+            'invoices_generated': invoice_count,
+            'invoices': [
+                {
+                    'id': inv.get('id'),
+                    'invoice_number': inv.get('invoice_number') or f'INV-{inv.get("id") or 0:04d}',
+                    'patient_name': inv.get('patient_name') or 'Patient',
+                    'doctor_name': inv.get('doctor_name') or 'Doctor',
+                    'amount': float(inv.get('amount') or 0),
+                    'status': inv.get('status') or 'pending',
+                    'payment_method': inv.get('payment_method') or 'Cash',
+                    'created_at': str(inv.get('created_at') or ''),
+                    'appointment_id': inv.get('appointment_id')
+                }
+                for inv in invoices
+            ]
+        }
+        return jsonify(payload), 200
+    except Exception as e:
+        print(f"Error fetching billing summary: {e}")
+        return jsonify({'message': str(e)}), 500
+
+
+@app.route('/api/billing/invoices', methods=['GET'])
+def api_get_billing_invoices():
+    """Return invoice list for admin portal."""
+    summary = api_billing_summary()
+    if summary and isinstance(summary, tuple):
+        data, status = summary
+        return data, status
+    return jsonify(summary), 200
+
+
+@app.route('/api/billing/invoice', methods=['POST'])
+def api_create_invoice():
+    """Create a simple invoice entry for a patient appointment."""
+    try:
+        data = request.json or {}
+        actor_id = data.get('actor_id')
+        role = _get_user_role(actor_id) if actor_id else None
+        if role != 'admin':
+            return jsonify({'message': 'Only admin can generate invoices'}), 403
+
+        patient_id = data.get('patient_id')
+        doctor_id = data.get('doctor_id')
+        appointment_id = data.get('appointment_id')
+        amount = data.get('amount', 500)
+        payment_method = data.get('payment_method', 'Cash')
+        status = data.get('status', 'pending')
+
+        if not patient_id or not doctor_id:
+            return jsonify({'message': 'patient_id and doctor_id are required'}), 400
+
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'message': 'Database error'}), 500
+        cursor = conn.cursor()
+        invoice_number = f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        cursor.execute('''
+            INSERT INTO billing_invoices (patient_id, doctor_id, appointment_id, invoice_number, amount, status, payment_method)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (patient_id, doctor_id, appointment_id, invoice_number, amount, status, payment_method))
+        conn.commit()
+        invoice_id = cursor.lastrowid
+        cursor.close(); conn.close()
+        return jsonify({'message': 'Invoice created', 'invoice_id': invoice_id, 'invoice_number': invoice_number}), 201
+    except Exception as e:
+        print(f"Error creating invoice: {e}")
+        return jsonify({'message': str(e)}), 500
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -1790,6 +2283,144 @@ def ensure_notifications_table_exists():
         print("OK - notifications table ensured")
     except Exception as e:
         print(f"Error creating notifications table: {e}")
+
+
+def ensure_lab_results_table_exists():
+    """Create lab_results table if it doesn't exist"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Cannot ensure lab_results table: DB connection failed")
+            return
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS lab_results (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                patient_id INT NOT NULL,
+                doctor_id INT,
+                test_name VARCHAR(100) NOT NULL,
+                test_date DATE,
+                result_value VARCHAR(255),
+                result_unit VARCHAR(50),
+                reference_range VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'normal',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES login(id) ON DELETE CASCADE,
+                FOREIGN KEY (doctor_id) REFERENCES login(id),
+                INDEX idx_patient_id (patient_id),
+                INDEX idx_test_date (test_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("OK - lab_results table ensured")
+    except Exception as e:
+        print(f"Error creating lab_results table: {e}")
+
+
+def ensure_patient_alerts_table_exists():
+    """Create patient_alerts table if it doesn't exist"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Cannot ensure patient_alerts table: DB connection failed")
+            return
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS patient_alerts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                patient_id INT NOT NULL,
+                alert_type VARCHAR(50),
+                alert_title VARCHAR(255) NOT NULL,
+                alert_message TEXT,
+                severity VARCHAR(50) DEFAULT 'low',
+                is_read BOOLEAN DEFAULT FALSE,
+                created_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES login(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by) REFERENCES login(id),
+                INDEX idx_patient_id (patient_id),
+                INDEX idx_severity (severity)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("OK - patient_alerts table ensured")
+    except Exception as e:
+        print(f"Error creating patient_alerts table: {e}")
+
+
+def ensure_follow_ups_table_exists():
+    """Create follow_ups table if it doesn't exist"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Cannot ensure follow_ups table: DB connection failed")
+            return
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS follow_ups (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                patient_id INT NOT NULL,
+                doctor_id INT NOT NULL,
+                original_appointment_id INT,
+                follow_up_date DATE NOT NULL,
+                follow_up_time TIME,
+                reason VARCHAR(255),
+                status VARCHAR(50) DEFAULT 'scheduled',
+                notes TEXT,
+                scheduled_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES login(id) ON DELETE CASCADE,
+                FOREIGN KEY (doctor_id) REFERENCES login(id),
+                FOREIGN KEY (original_appointment_id) REFERENCES appointments(id),
+                FOREIGN KEY (scheduled_by) REFERENCES login(id),
+                INDEX idx_patient_id (patient_id),
+                INDEX idx_doctor_id (doctor_id),
+                INDEX idx_follow_up_date (follow_up_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("OK - follow_ups table ensured")
+    except Exception as e:
+        print(f"Error creating follow_ups table: {e}")
+
+
+def ensure_billing_invoices_table_exists():
+    """Create billing invoice table if it doesn't exist."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Cannot ensure billing_invoices table: DB connection failed")
+            return
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS billing_invoices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                patient_id INT NOT NULL,
+                doctor_id INT,
+                appointment_id INT,
+                invoice_number VARCHAR(100) NOT NULL UNIQUE,
+                amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'pending',
+                payment_method VARCHAR(50) DEFAULT 'Cash',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES login(id) ON DELETE CASCADE,
+                FOREIGN KEY (doctor_id) REFERENCES login(id),
+                FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ''')
+        conn.commit()
+        cursor.close(); conn.close()
+        print("OK - billing_invoices table ensured")
+    except Exception as e:
+        print(f"Error creating billing_invoices table: {e}")
 
 
 # ============ PHARMACIST-ADMIN RESTOCK SYSTEM ============
@@ -2109,6 +2740,7 @@ if __name__ == '__main__':
     print("   POST /login")
     print("   POST /signup")
     print("   GET  /health")
+    print("   GET  /api/billing/summary")
     print("\n" + "=" * 70)
     print("Server running on http://0.0.0.0:5000/")
     print("Press Ctrl+C to stop the server\n")
@@ -2118,6 +2750,11 @@ if __name__ == '__main__':
         ensure_medicines_table_exists()
         ensure_restock_table_exists()
         ensure_notifications_table_exists()
+        ensure_lab_results_table_exists()
+        ensure_patient_alerts_table_exists()
+        ensure_follow_ups_table_exists()
+        ensure_billing_invoices_table_exists()
+        ensure_signup_verifications_table_exists()
     except Exception as e:
         print(f"Warning: could not ensure tables: {e}")
 

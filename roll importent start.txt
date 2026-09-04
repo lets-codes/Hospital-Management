@@ -1,0 +1,6 @@
+
+SERIAL NUMBER	ROLL	EMAIL ID	PASSWORD
+1	Patient	1@gmail.com	000000
+2	Doctor	2@gmail.com	000000
+3	Pharmacist	p@gmail.com	000000
+4	admin	a@gmail.com	000000

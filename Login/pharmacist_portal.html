@@ -62,6 +62,34 @@
             gap: 15px;
             margin-bottom: 30px;
             flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar-group,
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-pill {
+            border: 1px solid var(--border);
+            background: white;
+            color: #374151;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .filter-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
 
         .btn {
@@ -454,9 +482,17 @@
         </div>
 
         <div class="controls">
-            <input type="text" id="searchBox" class="form-input" placeholder="Search medicines..." style="flex: 1; max-width: 300px;">
-            <button class="btn btn-primary" onclick="openAddMedicineModal()">Add Medicine</button>
-            <button class="btn btn-success" onclick="refreshInventory()">Refresh</button>
+            <div class="toolbar-group" style="flex: 1; min-width: 280px;">
+                <input type="text" id="searchBox" class="form-input" placeholder="Search medicines..." style="flex: 1; max-width: 420px; min-width: 200px;">
+                <button class="btn btn-primary" onclick="openAddMedicineModal()">Add Medicine</button>
+                <button class="btn btn-success" onclick="refreshInventory()">Refresh</button>
+            </div>
+            <div class="filter-group" aria-label="Inventory filters">
+                <button class="filter-pill active" data-filter="all" type="button">All</button>
+                <button class="filter-pill" data-filter="low" type="button">Low Stock</button>
+                <button class="filter-pill" data-filter="expiring" type="button">Expiring Soon</button>
+                <button class="filter-pill" data-filter="recent" type="button">Recently Added</button>
+            </div>
         </div>
 
         <div id="medicinesContainer" class="medicines-grid">
@@ -542,24 +578,31 @@
         const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:5000' : window.location.origin;
         let allMedicines = [];
         let currentRestockMedicineId = null;
+        let currentFilter = 'all';
 
         // On page load
         window.addEventListener('DOMContentLoaded', () => {
-            const user = JSON.parse(localStorage.getItem('user'));
+            const storedUser = localStorage.getItem('user');
+            const user = storedUser ? JSON.parse(storedUser) : null;
             if (!user || user.role !== 'pharmacist') {
                 window.location.href = '/login.html';
                 return;
             }
             currentUser = user;
-            document.getElementById('pharmacistName').textContent = user.full_name || 'Pharmacist';
+            document.getElementById('pharmacistName').textContent = user.full_name || user.name || 'Pharmacist';
+            document.querySelectorAll('.filter-pill').forEach(button => {
+                button.addEventListener('click', () => {
+                    currentFilter = button.dataset.filter || 'all';
+                    document.querySelectorAll('.filter-pill').forEach(item => item.classList.toggle('active', item === button));
+                    applyMedicinesView();
+                });
+            });
             refreshInventory();
             loadNotifications();
-            // Poll for request updates so pharmacist sees admin actions
             setInterval(() => {
                 refreshRequests();
             }, 5000);
 
-            // Subscribe to server-sent events for real-time updates
             if (typeof(EventSource) !== 'undefined') {
                 try {
                     const es = new EventSource('/stream');
@@ -568,14 +611,10 @@
                             const ev = JSON.parse(e.data);
                             if (ev && ev.type) {
                                 if (ev.type === 'restock_update') {
-                                    // Refresh pharmacist requests to see approvals/rejections
                                     refreshRequests();
-                                    // Also refresh inventory when approvals occur
                                     if (ev.status === 'approved') refreshInventory();
-                                    // Persisted notifications available, refresh list
                                     loadNotifications();
                                 } else if (ev.type === 'medicine_added') {
-                                    // If another pharmacist/admin added medicine, refresh inventory
                                     refreshInventory();
                                     loadNotifications();
                                 }
@@ -591,6 +630,34 @@
             }
         });
 
+        function applyMedicinesView() {
+            const query = document.getElementById('searchBox').value.trim().toLowerCase();
+            let filtered = [...allMedicines];
+
+            if (currentFilter === 'low') {
+                filtered = filtered.filter(med => Number(med.quantity) <= 10);
+            } else if (currentFilter === 'expiring') {
+                filtered = filtered.filter(med => {
+                    if (!med.expiry_date) return false;
+                    const expiry = new Date(med.expiry_date);
+                    const today = new Date();
+                    const diffDays = (expiry - today) / (1000 * 60 * 60 * 24);
+                    return diffDays <= 90 && diffDays >= 0;
+                });
+            } else if (currentFilter === 'recent') {
+                filtered = filtered.slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            }
+
+            if (query) {
+                filtered = filtered.filter(med => {
+                    const haystack = `${med.name || ''} ${med.sku || ''} ${med.manufacturer || ''}`.toLowerCase();
+                    return haystack.includes(query);
+                });
+            }
+
+            displayMedicines(filtered);
+        }
+
         async function refreshInventory() {
             try {
                 const response = await fetch(`${API_BASE}/api/pharmacist/inventory?actor_id=${currentUser.id}`);
@@ -598,9 +665,9 @@
                 
                 if (response.ok) {
                     allMedicines = data.medicines || [];
-                    displayMedicines(allMedicines);
+                    applyMedicinesView();
                     updateStats();
-                    refreshRequests();  // Also refresh requests when refreshing inventory
+                    refreshRequests();
                 } else {
                     showAlert(data.message || 'Error loading inventory', 'error');
                 }
@@ -678,58 +745,66 @@
             const container = document.getElementById('medicinesContainer');
             
             if (!medicines || medicines.length === 0) {
-                container.innerHTML = '<div class="no-data">No medicines found. Add one to get started!</div>';
+                container.innerHTML = '<div class="no-data">No medicines match the current filter. Try clearing the search or choose another filter.</div>';
                 return;
             }
 
-            container.innerHTML = medicines.map(med => `
-                <div class="medicine-card">
-                    <div class="medicine-header">
-                        <div class="medicine-name">${escapeHtml(med.name)}</div>
-                        <span class="status-badge ${med.quantity <= 10 ? 'status-low' : 'status-ok'}">
-                            ${med.quantity <= 10 ? 'Low Stock' : 'OK'}
-                        </span>
+            container.innerHTML = medicines.map(med => {
+                const quantity = Number(med.quantity || 0);
+                const isLowStock = quantity <= 10;
+                const expiryDate = med.expiry_date ? new Date(med.expiry_date).toLocaleDateString() : 'N/A';
+                const safeName = escapeHtml(String(med.name || 'Unnamed Medicine'));
+                const safeNameAttribute = safeName.replace(/'/g, "\\'");
+
+                return `
+                    <div class="medicine-card">
+                        <div class="medicine-header">
+                            <div class="medicine-name">${safeName}</div>
+                            <span class="status-badge ${isLowStock ? 'status-low' : 'status-ok'}">
+                                ${isLowStock ? 'Low Stock' : 'OK'}
+                            </span>
+                        </div>
+                        
+                        <div class="medicine-info">
+                            <div class="info-row">
+                                <span class="info-label">SKU</span>
+                                <span class="info-value">${escapeHtml(med.sku || 'N/A')}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Manufacturer</span>
+                                <span class="info-value">${escapeHtml(med.manufacturer || 'N/A')}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Batch Number</span>
+                                <span class="info-value">${escapeHtml(med.batch_no || 'N/A')}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Unit Price</span>
+                                <span class="info-value">Rs ${Number(med.unit_price || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Expiry Date</span>
+                                <span class="info-value">${expiryDate}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="quantity-display ${isLowStock ? 'low' : 'ok'}">
+                            ${quantity} Units
+                        </div>
+                        
+                        ${Number(med.pending_requests || 0) > 0 ? `<p style="text-align: center; color: var(--warning); font-size: 12px; margin: 10px 0;">
+                            Pending restock request(s): ${med.pending_requests}
+                        </p>` : ''}
+                        
+                        <div class="medicine-actions">
+                            <button class="btn btn-primary" onclick="openRestockModal(${med.id}, '${safeNameAttribute}', ${quantity})">
+                                Request Restock
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteMedicine(${med.id})">Delete</button>
+                        </div>
                     </div>
-                    
-                    <div class="medicine-info">
-                        <div class="info-row">
-                            <span class="info-label">SKU</span>
-                            <span class="info-value">${med.sku || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Manufacturer</span>
-                            <span class="info-value">${med.manufacturer || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Batch Number</span>
-                            <span class="info-value">${med.batch_no || 'N/A'}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Unit Price</span>
-                            <span class="info-value">Rs ${med.unit_price || 0}</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Expiry Date</span>
-                            <span class="info-value">${med.expiry_date || 'N/A'}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="quantity-display ${med.quantity <= 10 ? 'low' : 'ok'}">
-                        ${med.quantity} Units
-                    </div>
-                    
-                    ${med.pending_requests > 0 ? `<p style="text-align: center; color: var(--warning); font-size: 12px; margin: 10px 0;">
-                        Pending restock request(s): ${med.pending_requests}
-                    </p>` : ''}
-                    
-                    <div class="medicine-actions">
-                        <button class="btn btn-primary" onclick="openRestockModal(${med.id}, '${escapeHtml(med.name)}', ${med.quantity})">
-                            Request Restock
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteMedicine(${med.id})">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateStats() {
@@ -830,9 +905,13 @@
         }
 
         function openRestockModal(medicineId, medicineName, currentQty) {
+            if (!medicineId || !medicineName) {
+                showAlert('Please select a valid medicine before requesting restock.', 'error');
+                return;
+            }
             currentRestockMedicineId = medicineId;
             document.getElementById('restockMedicineName').value = medicineName;
-            document.getElementById('restockCurrentQty').value = currentQty;
+            document.getElementById('restockCurrentQty').value = currentQty || 0;
             document.getElementById('restockRequestQty').value = '';
             document.getElementById('restockReason').value = 'Low stock';
             document.getElementById('restockModal').classList.add('active');
@@ -844,12 +923,22 @@
         }
 
         async function submitRestockRequest() {
-            const quantity = parseInt(document.getElementById('restockRequestQty').value);
+            const quantity = parseInt(document.getElementById('restockRequestQty').value, 10);
             const reason = document.getElementById('restockReason').value.trim();
-            const medicineName = document.getElementById('restockMedicineName').value;
+            const medicineName = document.getElementById('restockMedicineName').value.trim();
 
-            if (!quantity || quantity <= 0) {
-                showAlert('Please enter a valid quantity', 'error');
+            if (!currentRestockMedicineId) {
+                showAlert('Please select a medicine before submitting a restock request.', 'error');
+                return;
+            }
+
+            if (!medicineName) {
+                showAlert('Medicine name is missing. Please reopen the restock dialog.', 'error');
+                return;
+            }
+
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                showAlert('Please enter a valid restock quantity greater than 0.', 'error');
                 return;
             }
 
@@ -862,7 +951,7 @@
                         medicine_id: currentRestockMedicineId,
                         medicine_name: medicineName,
                         requested_quantity: quantity,
-                        reason: reason
+                        reason: reason || 'Low stock'
                     })
                 });
 
@@ -901,10 +990,8 @@
             }
         }
 
-        document.getElementById('searchBox').addEventListener('input', (e) => {
-            const search = e.target.value.toLowerCase();
-            const filtered = allMedicines.filter(m => m.name.toLowerCase().includes(search));
-            displayMedicines(filtered);
+        document.getElementById('searchBox').addEventListener('input', () => {
+            applyMedicinesView();
         });
 
         function showAlert(message, type) {
@@ -929,6 +1016,7 @@
             try {
                 localStorage.removeItem('user');
                 localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('rememberedLogin');
                 fetch('http://localhost:5000/logout', { method: 'POST' }).catch(e => {});
             } catch(e) {
                 console.error('Error during logout:', e);

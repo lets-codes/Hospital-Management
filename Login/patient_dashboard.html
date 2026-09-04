@@ -381,13 +381,13 @@
         <!-- Tabs Section -->
         <div class="section">
             <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard</button>
-                <button class="tab-btn" onclick="switchTab('appointments')">📅 My Appointments</button>
-                <button class="tab-btn" onclick="switchTab('medical')">📋 Medical History</button>
-                <button class="tab-btn" onclick="switchTab('prescriptions')">💊 Prescriptions</button>
-                <button class="tab-btn" onclick="switchTab('labs')">🧪 Lab Results</button>
-                <button class="tab-btn" onclick="switchTab('alerts')">⚠️ Alerts & Follow-ups</button>
-                <button class="tab-btn" onclick="switchTab('book')">➕ Book Appointment</button>
+                <button class="tab-btn active" onclick="switchTab('dashboard', event)">📊 Dashboard</button>
+                <button class="tab-btn" onclick="switchTab('appointments', event)">📅 My Appointments</button>
+                <button class="tab-btn" onclick="switchTab('medical', event)">📋 Medical History</button>
+                <button class="tab-btn" onclick="switchTab('prescriptions', event)">💊 Prescriptions</button>
+                <button class="tab-btn" onclick="switchTab('labs', event)">🧪 Lab Results</button>
+                <button class="tab-btn" onclick="switchTab('alerts', event)">⚠️ Alerts & Follow-ups</button>
+                <button class="tab-btn" onclick="switchTab('book', event)">➕ Book Appointment</button>
             </div>
 
             <!-- Dashboard Tab -->
@@ -588,7 +588,7 @@
             document.getElementById('userName').textContent = user.full_name || user.name || 'Patient';
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -600,7 +600,7 @@
             // Show selected tab
             document.getElementById(tabName).classList.add('active');
             // Activate button
-            event.target.classList.add('active');
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
         }
 
         function loadPatientData() {
@@ -858,7 +858,7 @@
         }
 
         // NEW FEATURES: Lab Results, Alerts, Follow-ups
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -869,7 +869,7 @@
             });
             // Show selected tab and activate button
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
 
             // Load data when switching to labs or alerts tabs
             const user = JSON.parse(localStorage.getItem('user'));
@@ -886,27 +886,29 @@
             .then(r => r.json())
             .then(data => {
                 const container = document.getElementById('labResultsContainer');
-                if (!data.results || data.results.length === 0) {
+                const results = data.lab_results || data.results || [];
+                if (!results || results.length === 0) {
                     container.innerHTML = '<div class="empty-state"><div class="empty-icon">🧪</div>No lab results yet.</div>';
                     return;
                 }
 
                 let html = '<div style="display: grid; gap: 1rem;">';
-                data.results.forEach(lab => {
-                    const statusColor = lab.status === 'normal' ? '#4caf50' : lab.status === 'abnormal' ? '#ff9800' : '#f44336';
-                    const dateStr = new Date(lab.test_date).toLocaleDateString('en-US', { 
+                results.forEach(lab => {
+                    const status = String(lab.status || 'normal').toLowerCase();
+                    const statusColor = status === 'normal' ? '#4caf50' : status === 'abnormal' ? '#ff9800' : '#f44336';
+                    const dateStr = lab.test_date ? new Date(lab.test_date).toLocaleDateString('en-US', { 
                         year: 'numeric', month: 'short', day: 'numeric' 
-                    });
+                    }) : 'N/A';
                     html += `
                         <div style="background: white; padding: 1.5rem; border-radius: 8px; border-left: 4px solid ${statusColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                                 <div>
-                                    <h4 style="margin: 0 0 0.5rem 0; color: #333;">${lab.test_name}</h4>
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #333;">${lab.test_name || 'Lab Test'}</h4>
                                     <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">📅 ${dateStr}</p>
-                                    <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">👨‍⚕️ Dr. ${lab.doctor_name || 'N/A'}</p>
+                                    <p style="margin: 0.25rem 0; font-size: 0.9rem; color: #666;">👨‍⚕️ ${lab.doctor_name ? 'Dr. ' + lab.doctor_name : 'Lab Report'}</p>
                                 </div>
                                 <span style="background: ${statusColor}; color: white; padding: 0.5rem 1.2rem; border-radius: 20px; font-weight: 600; text-transform: uppercase; font-size: 0.8rem;">
-                                    ${lab.status}
+                                    ${status}
                                 </span>
                             </div>
                             <div style="padding-top: 1rem; border-top: 1px solid #eee;">
@@ -938,20 +940,25 @@
 
                 let html = '<div style="display: grid; gap: 1rem;">';
                 data.alerts.forEach(alert => {
-                    const severityColor = alert.severity === 'low' ? '#8bc34a' : alert.severity === 'medium' ? '#ff9800' : '#f44336';
-                    const dateStr = new Date(alert.created_at).toLocaleDateString('en-US', { 
-                        year: 'numeric', month: 'short', day: 'numeric' 
-                    });
+                    const severity = String(alert.severity || 'low').toLowerCase();
+                    const severityColor = severity === 'low' ? '#8bc34a' : severity === 'medium' ? '#ff9800' : '#f44336';
+                    const title = alert.alert_title || alert.alert_type || 'Patient Alert';
+                    const message = alert.alert_message || 'No message provided.';
+                    const creator = alert.created_by_name ? 'Dr. ' + alert.created_by_name : 'System';
+                    const dateStr = alert.created_at ? new Date(alert.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric'
+                    }) : 'Recent';
+
                     html += `
                         <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${severityColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.75rem;">
                                 <div>
-                                    <h5 style="margin: 0 0 0.5rem 0; color: #d9534f;">⚠️ ${alert.alert_title}</h5>
-                                    <p style="margin: 0.25rem 0; font-size: 0.9rem;">${alert.alert_message}</p>
-                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #999;">By Dr. ${alert.created_by_name || 'System'} • ${dateStr}</p>
+                                    <h5 style="margin: 0 0 0.5rem 0; color: #d9534f;">⚠️ ${title}</h5>
+                                    <p style="margin: 0.25rem 0; font-size: 0.9rem;">${message}</p>
+                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #999;">By ${creator} • ${dateStr}</p>
                                 </div>
                                 <span style="background: ${severityColor}; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem; white-space: nowrap;">
-                                    ${alert.severity.toUpperCase()}
+                                    ${severity.toUpperCase()}
                                 </span>
                             </div>
                         </div>
@@ -978,16 +985,18 @@
 
                 let html = '<div style="display: grid; gap: 1rem;">';
                 data.followups.forEach(fu => {
-                    const dateStr = new Date(fu.follow_up_date).toLocaleDateString('en-US', { 
-                        year: 'numeric', month: 'short', day: 'numeric' 
-                    });
+                    const dateStr = fu.follow_up_date ? new Date(fu.follow_up_date).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric'
+                    }) : 'Date TBD';
+                    const doctorName = fu.doctor_name ? fu.doctor_name : 'Doctor';
+                    const timeText = fu.follow_up_time ? ` at ${fu.follow_up_time}` : '';
                     html += `
                         <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #0275d8; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 0.75rem;">
                                 <div>
                                     <h5 style="margin: 0 0 0.5rem 0; color: #0275d8;">📌 Scheduled Check-up</h5>
-                                    <p style="margin: 0.25rem 0; font-weight: 600;"><strong>${dateStr}</strong> at ${fu.follow_up_time}</p>
-                                    <p style="margin: 0.25rem 0; font-size: 0.9rem;">👨‍⚕️ Dr. ${fu.doctor_name}</p>
+                                    <p style="margin: 0.25rem 0; font-weight: 600;"><strong>${dateStr}</strong>${timeText}</p>
+                                    <p style="margin: 0.25rem 0; font-size: 0.9rem;">👨‍⚕️ Dr. ${doctorName}</p>
                                     ${fu.reason ? `<p style="margin: 0.25rem 0; font-size: 0.9rem;">Reason: ${fu.reason}</p>` : ''}
                                 </div>
                                 <span style="background: #0275d8; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.85rem;">
@@ -1009,6 +1018,7 @@
         function logout() {
             localStorage.removeItem('user');
             localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberedLogin');
             fetch('http://localhost:5000/logout', { method: 'POST' }).catch(e => {});
             window.location.href = 'login.html';
         }

@@ -83,6 +83,7 @@
 
     <!-- Main Content -->
     <div class="container">
+        <div id="doctorFeedback" class="alert" style="display: none;" role="status" aria-live="polite"></div>
         <!-- Statistics Cards -->
         <div class="stats">
             <div class="stat-card">
@@ -102,10 +103,10 @@
         <!-- Tabs -->
         <div class="tabs-container">
             <div class="tabs-header">
-                <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
-                <button class="tab-btn" onclick="switchTab('appointments')">📅 Appointments</button>
-                <button class="tab-btn" onclick="switchTab('patients')">👥 Patients</button>
-                <button class="tab-btn" onclick="switchTab('consultation')">🩺 Consultation</button>
+                <button class="tab-btn active" onclick="switchTab('overview', event)">📊 Overview</button>
+                <button class="tab-btn" onclick="switchTab('appointments', event)">📅 Appointments</button>
+                <button class="tab-btn" onclick="switchTab('patients', event)">👥 Patients</button>
+                <button class="tab-btn" onclick="switchTab('consultation', event)">🩺 Consultation</button>
             </div>
 
             <div class="tabs-content">
@@ -209,7 +210,7 @@
             const user = JSON.parse(userData);
             if (user.role !== 'doctor') {
                 console.log('User is not a doctor');
-                window.location.href = 'patient_dashboard.html';
+                window.location.href = 'login.html';
                 return;
             }
             console.log('User authenticated:', user.full_name);
@@ -302,7 +303,7 @@
             }
             
             container.innerHTML = patients.map(p => `
-                <div class="patient-card" onclick="viewPatient(${p.id}, '${p.full_name}')">
+                <div class="patient-card" data-patient-card="true" onclick="viewPatient(${p.id}, '${p.full_name}')">
                     <div class="patient-name">${p.full_name}</div>
                     <div class="patient-info">📧 ${p.email}</div>
                     <div class="patient-info">📞 ${p.phone}</div>
@@ -319,11 +320,11 @@
             });
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
         }
 
         function startConsultation(patientId) {
@@ -368,17 +369,17 @@
             })
             .then(data => {
                 if (data.updated_medicines || data.updated_medicine) {
-                    alert('Consultation saved. Medicine stock decremented.');
+                    showDoctorFeedback('Consultation saved. Medicine stock decremented.', 'success');
                 } else if (data.warning) {
-                    alert('Consultation saved. Warning: ' + data.warning);
+                    showDoctorFeedback('Consultation saved. Warning: ' + data.warning, 'error');
                 } else {
-                    alert('Consultation saved successfully!');
+                    showDoctorFeedback('Consultation saved successfully!', 'success');
                 }
                 e.target.reset();
                 // Refresh medicine dropdown to reflect new stock
                 loadMedicinesForConsultation();
             })
-            .catch(err => alert('Error: ' + err.message));
+            .catch(err => showDoctorFeedback('Error: ' + err.message, 'error'));
         }
 
         function loadMedicinesForConsultation() {
@@ -418,20 +419,150 @@
             fetch(`http://localhost:5000/get-patient-details/${patientId}`)
                 .then(r => r.json())
                 .then(data => {
+                    const patient = data.patient_info || {};
+                    const vitals = data.vitals || {};
+                    const healthInfo = data.health_info || {};
+
                     document.getElementById('modalBody').innerHTML = `
                         <div>
-                            <p><strong>Name:</strong> ${data.patient_info?.full_name || 'N/A'}</p>
-                            <p><strong>Email:</strong> ${data.patient_info?.email || 'N/A'}</p>
-                            <p><strong>Phone:</strong> ${data.patient_info?.phone || 'N/A'}</p>
-                            <p><strong>DOB:</strong> ${data.patient_info?.date_of_birth || 'N/A'}</p>
-                            <p><strong>Blood Pressure:</strong> ${data.vitals?.blood_pressure || 'N/A'}</p>
-                            <p><strong>Weight:</strong> ${data.vitals?.weight || 'N/A'}</p>
+                            <p><strong>Name:</strong> ${patient.full_name || 'N/A'}</p>
+                            <p><strong>Email:</strong> ${patient.email || 'N/A'}</p>
+                            <p><strong>Phone:</strong> ${patient.phone || 'N/A'}</p>
+                            <p><strong>DOB:</strong> ${patient.date_of_birth || 'N/A'}</p>
+                            <p><strong>Blood Pressure:</strong> ${vitals.blood_pressure || 'N/A'}</p>
+                            <p><strong>Weight:</strong> ${vitals.weight || 'N/A'}</p>
+                            <p><strong>Allergies:</strong> ${healthInfo.allergies || 'N/A'}</p>
+                            <p><strong>Chronic Conditions:</strong> ${healthInfo.chronic_conditions || 'N/A'}</p>
+                        </div>
+
+                        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #eee;">
+                            <h3 style="margin-bottom: 1rem;">Quick Actions</h3>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label class="form-label">Alert Title</label>
+                                <input id="doctorAlertTitle_${patientId}" class="form-input" placeholder="e.g. Medication Reminder" />
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label class="form-label">Alert Message</label>
+                                <textarea id="doctorAlertMessage_${patientId}" placeholder="Enter patient alert details"></textarea>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label class="form-label">Severity</label>
+                                <select id="doctorAlertSeverity_${patientId}" class="form-select">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="createPatientAlert(${patientId})">Save Alert</button>
+
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                                <div style="margin-bottom: 1rem;">
+                                    <label class="form-label">Follow-up Date</label>
+                                    <input id="doctorFollowUpDate_${patientId}" type="date" class="form-input" />
+                                </div>
+                                <div style="margin-bottom: 1rem;">
+                                    <label class="form-label">Follow-up Time</label>
+                                    <input id="doctorFollowUpTime_${patientId}" type="time" class="form-input" />
+                                </div>
+                                <div style="margin-bottom: 1rem;">
+                                    <label class="form-label">Reason</label>
+                                    <textarea id="doctorFollowUpReason_${patientId}" placeholder="Why should the patient return?"></textarea>
+                                </div>
+                                <button class="btn btn-primary" onclick="scheduleFollowUp(${patientId})">Schedule Follow-up</button>
+                            </div>
                         </div>
                     `;
                 })
                 .catch(err => {
                     document.getElementById('modalBody').innerHTML = '<div class="alert alert-error">Error loading patient details</div>';
                 });
+        }
+
+        function createPatientAlert(patientId) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const title = document.getElementById(`doctorAlertTitle_${patientId}`)?.value?.trim() || 'Patient Alert';
+            const message = document.getElementById(`doctorAlertMessage_${patientId}`)?.value?.trim();
+            const severity = document.getElementById(`doctorAlertSeverity_${patientId}`)?.value || 'low';
+
+            if (!message) {
+                showDoctorFeedback('Please enter the alert message.', 'error');
+                return;
+            }
+
+            fetch('http://localhost:5000/api/alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: patientId,
+                    doctor_id: user.id,
+                    alert_title: title,
+                    alert_message: message,
+                    alert_type: 'medical',
+                    severity: severity
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.message && data.message.toLowerCase().includes('created')) {
+                    showDoctorFeedback('Alert saved successfully.', 'success');
+                    closeModal();
+                } else {
+                    showDoctorFeedback(data.message || 'Failed to save patient alert.', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showDoctorFeedback('Error saving patient alert.', 'error');
+            });
+        }
+
+        function scheduleFollowUp(patientId) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const followupDate = document.getElementById(`doctorFollowUpDate_${patientId}`)?.value;
+            const followupTime = document.getElementById(`doctorFollowUpTime_${patientId}`)?.value;
+            const reason = document.getElementById(`doctorFollowUpReason_${patientId}`)?.value?.trim() || '';
+
+            if (!followupDate || !followupTime) {
+                showDoctorFeedback('Please choose a follow-up date and time.', 'error');
+                return;
+            }
+
+            fetch('http://localhost:5000/api/followup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: patientId,
+                    doctor_id: user.id,
+                    followup_date: followupDate,
+                    followup_time: followupTime,
+                    reason: reason
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.message && data.message.toLowerCase().includes('scheduled')) {
+                    showDoctorFeedback('Follow-up scheduled successfully.', 'success');
+                    closeModal();
+                } else {
+                    showDoctorFeedback(data.message || 'Failed to schedule follow-up.', 'error');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showDoctorFeedback('Error scheduling follow-up.', 'error');
+            });
+        }
+
+        function showDoctorFeedback(message, type) {
+            const feedback = document.getElementById('doctorFeedback');
+            feedback.textContent = message;
+            feedback.className = `alert alert-${type}`;
+            feedback.style.display = 'block';
+            window.clearTimeout(showDoctorFeedback.timer);
+            showDoctorFeedback.timer = window.setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 5000);
         }
 
         function closeModal() {
@@ -441,6 +572,7 @@
         function logout() {
             localStorage.removeItem('user');
             localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberedLogin');
             fetch('http://localhost:5000/logout', { method: 'POST' }).catch(e => {});
             window.location.href = 'login.html';
         }

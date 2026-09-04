@@ -11,6 +11,13 @@ import sys
 # Try these passwords in order (add your password here if needed)
 COMMON_PASSWORDS = ['root', '', 'password', 'mysql', '12345', 'root@123']
 
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': '', # This will be iterated over by COMMON_PASSWORDS
+    'database': 'deepanshu'
+}
+
 def create_connection():
     """Create a database connection with multiple password attempts."""
     for password in COMMON_PASSWORDS:
@@ -23,14 +30,14 @@ def create_connection():
             if connection.is_connected():
                 db_info = connection.get_server_info()
                 pwd_display = "no password" if not password else f"password: {'*' * len(password)}"
-                print(f"✅ Connected to MySQL Server v{db_info} ({pwd_display})")
+                print(f"[OK] Connected to MySQL Server v{db_info} ({pwd_display})")
                 return connection
         except Error:
             continue
     
     # If all attempts fail
-    print(f"❌ Error: Could not connect to MySQL with default passwords")
-    print("\n⚠️ SOLUTION:")
+    print(f"[ERROR] Error: Could not connect to MySQL with default passwords")
+    print("\n[WARNING] SOLUTION:")
     print("1. Edit this file line 11, add your MySQL password to COMMON_PASSWORDS list")
     print("2. Save and run again")
     print("\nExample: COMMON_PASSWORDS = ['', 'root', 'your_password_here']")
@@ -51,13 +58,13 @@ def fix_database():
 
     try:
         # STEP 1: Ensure database exists
-        print("📍 STEP 1: Creating/Verifying Database...")
+        print("[STEP] 1: Creating/Verifying Database...")
         cursor.execute("CREATE DATABASE IF NOT EXISTS deepanshu")
         cursor.execute("USE deepanshu")
-        print("✅ Database 'deepanshu' ready\n")
+        print("[OK] Database 'deepanshu' ready\n")
 
         # STEP 2: Drop all existing user tables in the database to ensure clean schema
-        print("📍 STEP 2: Dropping all existing tables in the database for a clean slate...")
+        print("[STEP] 2: Dropping all existing tables in the database for a clean slate...")
         try:
             # Disable FK checks
             cursor.execute('SET FOREIGN_KEY_CHECKS=0')
@@ -69,9 +76,9 @@ def fix_database():
         for table in existing_tables:
             try:
                 cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
-                print(f"   ✓ Dropped {table}")
+                print(f"   * Dropped {table}")
             except Exception as e:
-                print(f"   ⚠️ Could not drop {table}: {e}")
+                print(f"   [WARNING] Could not drop {table}: {e}")
 
         try:
             cursor.execute('SET FOREIGN_KEY_CHECKS=1')
@@ -81,7 +88,7 @@ def fix_database():
         print()
 
         # STEP 3: Create LOGIN table with ROLE column
-        print("📍 STEP 3: Creating LOGIN table (with role support for patient & doctor)...")
+        print("[STEP] 3: Creating LOGIN table (with role support for patient & doctor)...")
         login_table = """
         CREATE TABLE login (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -89,7 +96,7 @@ def fix_database():
             email VARCHAR(255) UNIQUE NOT NULL,
             phone VARCHAR(20),
             password VARCHAR(255) NOT NULL,
-            role ENUM('patient', 'doctor', 'admin') DEFAULT 'patient' COMMENT 'Patient or Doctor user',
+            role ENUM('patient', 'doctor', 'admin', 'pharmacist') DEFAULT 'patient' COMMENT 'Patient or Doctor user',
             
             -- Doctor-specific fields
             specialization VARCHAR(100) COMMENT 'Doctor specialization',
@@ -115,10 +122,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(login_table)
-        print("✅ LOGIN table created with role support\n")
+        print("[OK] LOGIN table created with role support\n")
 
         # STEP 4: Create APPOINTMENTS table
-        print("📍 STEP 4: Creating APPOINTMENTS table...")
+        print("[STEP] 4: Creating APPOINTMENTS table...")
         # Create a minimal appointments table first to avoid environment-specific FK or enum issues
         appointments_table = """
         CREATE TABLE appointments (
@@ -127,6 +134,9 @@ def fix_database():
             doctor_id INT NOT NULL,
             appointment_date DATE NOT NULL,
             appointment_time TIME NOT NULL,
+            reason_for_visit TEXT,
+            consultation_type VARCHAR(50),
+            status VARCHAR(50) DEFAULT 'scheduled',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_patient_id (patient_id),
@@ -139,13 +149,13 @@ def fix_database():
         print("--- END APPOINTMENTS SQL ---")
         try:
             cursor.execute(appointments_table)
-            print("✅ APPOINTMENTS table created\n")
+            print("[OK] APPOINTMENTS table created\n")
         except Error as e:
             print(f"Appointment CREATE error: {e}")
             raise
 
         # STEP 5: Create PATIENT_MEDICAL_RECORDS table
-        print("📍 STEP 5: Creating PATIENT_MEDICAL_RECORDS table...")
+        print("[STEP] 5: Creating PATIENT_MEDICAL_RECORDS table...")
         medical_records_table = """
         CREATE TABLE patient_medical_records (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -153,6 +163,8 @@ def fix_database():
             doctor_id INT,
             appointment_id INT,
             diagnosis TEXT,
+            comments TEXT,
+            observations TEXT,
             symptoms TEXT,
             prescription TEXT,
             blood_pressure VARCHAR(20),
@@ -176,10 +188,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(medical_records_table)
-        print("✅ PATIENT_MEDICAL_RECORDS table created\n")
+        print("[OK] PATIENT_MEDICAL_RECORDS table created\n")
 
         # STEP 6: Create PRESCRIPTIONS table
-        print("📍 STEP 6: Creating PRESCRIPTIONS table...")
+        print("[STEP] 6: Creating PRESCRIPTIONS table...")
         prescriptions_table = """
         CREATE TABLE prescriptions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -209,10 +221,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(prescriptions_table)
-        print("✅ PRESCRIPTIONS table created\n")
+        print("[OK] PRESCRIPTIONS table created\n")
 
         # STEP 7: Create DOCTOR_SCHEDULE table
-        print("📍 STEP 7: Creating DOCTOR_SCHEDULE table...")
+        print("[STEP] 7: Creating DOCTOR_SCHEDULE table...")
         doctor_schedule_table = """
         CREATE TABLE doctor_schedule (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -232,10 +244,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(doctor_schedule_table)
-        print("✅ DOCTOR_SCHEDULE table created\n")
+        print("[OK] DOCTOR_SCHEDULE table created\n")
 
         # STEP 8: Create LAB_TESTS table
-        print("📍 STEP 8: Creating LAB_TESTS table...")
+        print("[STEP] 8: Creating LAB_TESTS table...")
         lab_tests_table = """
         CREATE TABLE lab_tests (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -256,10 +268,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(lab_tests_table)
-        print("✅ LAB_TESTS table created\n")
+        print("[OK] LAB_TESTS table created\n")
 
         # STEP 9: Create PATIENT_ILLNESS_HISTORY table
-        print("📍 STEP 9: Creating PATIENT_ILLNESS_HISTORY table...")
+        print("[STEP] 9: Creating PATIENT_ILLNESS_HISTORY table...")
         illness_history_table = """
         CREATE TABLE patient_illness_history (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -279,10 +291,10 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(illness_history_table)
-        print("✅ PATIENT_ILLNESS_HISTORY table created\n")
+        print("[OK] PATIENT_ILLNESS_HISTORY table created\n")
 
         # STEP 10: Create DOCTOR_PATIENT_RELATIONSHIP table
-        print("📍 STEP 10: Creating DOCTOR_PATIENT_RELATIONSHIP table...")
+        print("[STEP] 10: Creating DOCTOR_PATIENT_RELATIONSHIP table...")
         relationship_table = """
         CREATE TABLE doctor_patient_relationship (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -301,25 +313,25 @@ def fix_database():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
         cursor.execute(relationship_table)
-        print("✅ DOCTOR_PATIENT_RELATIONSHIP table created\n")
+        print("[OK] DOCTOR_PATIENT_RELATIONSHIP table created\n")
 
         conn.commit()
         cursor.close()
         conn.close()
 
         print("="*70)
-        print("✅ DATABASE FIX COMPLETE!")
+        print("[OK] DATABASE FIX COMPLETE!")
         print("="*70)
-        print("\n✨ All tables created successfully with proper schema:")
-        print("   ✓ LOGIN table with role support (patient/doctor)")
-        print("   ✓ APPOINTMENTS table for booking appointments")
-        print("   ✓ PATIENT_MEDICAL_RECORDS for health data")
-        print("   ✓ PRESCRIPTIONS for medicines")
-        print("   ✓ DOCTOR_SCHEDULE for availability")
-        print("   ✓ LAB_TESTS for test results")
-        print("   ✓ PATIENT_ILLNESS_HISTORY for disease tracking")
-        print("   ✓ DOCTOR_PATIENT_RELATIONSHIP for associations")
-        print("\n🚀 NEXT STEPS:")
+        print("\n>> All tables created successfully with proper schema:")
+        print("   * LOGIN table with role support (patient/doctor)")
+        print("   * APPOINTMENTS table for booking appointments")
+        print("   * PATIENT_MEDICAL_RECORDS for health data")
+        print("   * PRESCRIPTIONS for medicines")
+        print("   * DOCTOR_SCHEDULE for availability")
+        print("   * LAB_TESTS for test results")
+        print("   * PATIENT_ILLNESS_HISTORY for disease tracking")
+        print("   * DOCTOR_PATIENT_RELATIONSHIP for associations")
+        print("\n>> NEXT STEPS:")
         print("   1. Start the backend: python server_patient_doctor.py")
         print("   2. Open browser: http://localhost:5000/hospital_landing.html")
         print("   3. Sign up as Patient or Doctor")
@@ -329,7 +341,7 @@ def fix_database():
         return True
 
     except Error as e:
-        print(f"❌ Database Error: {e}")
+        print(f"[ERROR] Database Error: {e}")
         print(f"\nFailed to create tables. Error details: {str(e)}")
         conn.close()
         return False
